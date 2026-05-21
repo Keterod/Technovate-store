@@ -1,0 +1,14 @@
+Coloca tu logo en esta carpeta con el nombre exacto:
+
+  technovate_logo.png
+
+Ruta completa:
+  assets/images/technovate_logo.png
+
+Después ejecuta en la raíz del proyecto:
+
+  flutter pub get
+  dart run flutter_launcher_icons
+
+Para ver el ícono nuevo en el teléfono, desinstala la app anterior e instálala de nuevo
+(o ejecuta: flutter clean && flutter run).
