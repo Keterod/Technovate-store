@@ -9,7 +9,7 @@ Widget logoTechnovate({double height = 28}) {
     errorBuilder: (context, error, stackTrace) => Icon(
       Icons.memory,
       size: height,
-      color: Colors.indigo,
+      color: Theme.of(context).colorScheme.primary,
     ),
   );
 }

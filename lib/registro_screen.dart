@@ -6,7 +6,6 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'auth_utils.dart';
-import 'digizone_utils.dart';
 
 const String dniToken =
     'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6ImpmY2M5NTAxMjMwOUBnbWFpbC5jb20ifQ.UaK6eecpbt-mVnF9hI-BYSHtl6QQ5hCLU1MNItWe9P8';
@@ -249,9 +248,12 @@ class _RegistroScreenState extends State<RegistroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: tituloTechnovate(subtitulo: 'Registro'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
+        title: Row(mainAxisSize: MainAxisSize.min, children: [
+          const Icon(Icons.memory, size: 22, color: Colors.white),
+          const SizedBox(width: 8),
+          Text('TECHNOVATE - Registro', style: const TextStyle(color: Colors.white)),
+        ]),
+
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
@@ -280,10 +282,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
                     )
                   : const Icon(Icons.search),
               label: Text(_consultandoDni ? 'Consultando...' : 'Consultar DNI'),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
-              ),
+              style: ElevatedButton.styleFrom(),
             ),
             const SizedBox(height: 16),
             TextField(
@@ -358,8 +357,6 @@ class _RegistroScreenState extends State<RegistroScreen> {
               label: Text(_cargando ? 'Creando cuenta...' : 'Crear cuenta'),
               style: ElevatedButton.styleFrom(
                 padding: const EdgeInsets.symmetric(vertical: 14),
-                backgroundColor: Colors.indigo,
-                foregroundColor: Colors.white,
               ),
             ),
           ],

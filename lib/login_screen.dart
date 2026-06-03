@@ -1,10 +1,9 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:go_router/go_router.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_utils.dart';
-import 'digizone_utils.dart';
+import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -65,7 +64,10 @@ class _LoginScreenState extends State<LoginScreen> {
       final googleUser = await GoogleSignIn().signIn();
       if (googleUser == null) { if (mounted) setState(() => _cargandoGoogle = false); return; }
       final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(accessToken: googleAuth.accessToken, idToken: googleAuth.idToken);
+      final credential = GoogleAuthProvider.credential(
+        accessToken: googleAuth.accessToken,
+        idToken: googleAuth.idToken,
+      );
       final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
       final user = userCredential.user;
       if (user != null && userCredential.additionalUserInfo?.isNewUser == true) {
@@ -111,16 +113,16 @@ class _LoginScreenState extends State<LoginScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  logoTechnovate(height: 72),
+                  Icon(Icons.memory, size: 72, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(height: 12),
-                  Text(technovateNombre, style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Colors.indigo.shade900)),
+                  Text('TECHNOVATE', style: TextStyle(fontSize: 28, fontWeight: FontWeight.bold, color: Theme.of(context).colorScheme.primary)),
                   const SizedBox(height: 8),
                   Text('Inicia sesión para continuar', style: TextStyle(color: Colors.grey.shade700)),
                   const SizedBox(height: 32),
                   TextFormField(
                     controller: _correoController,
                     keyboardType: TextInputType.emailAddress,
-                    decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.email)),
+                    decoration: const InputDecoration(labelText: 'Correo electrónico', prefixIcon: Icon(Icons.email), border: OutlineInputBorder()),
                     validator: (v) {
                       if (v == null || v.trim().isEmpty) return 'Ingresa tu correo';
                       if (!RegExp(r'^[^@]+@[^@]+\.[^@]+').hasMatch(v.trim())) return 'Correo inválido';
@@ -134,6 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     decoration: InputDecoration(
                       labelText: 'Contraseña',
                       prefixIcon: const Icon(Icons.lock),
+                      border: const OutlineInputBorder(),
                       suffixIcon: IconButton(
                         icon: Icon(_ocultarContrasena ? Icons.visibility_off : Icons.visibility),
                         onPressed: () => setState(() => _ocultarContrasena = !_ocultarContrasena),
@@ -171,7 +174,7 @@ class _LoginScreenState extends State<LoginScreen> {
                   SizedBox(
                     width: double.infinity,
                     child: TextButton(
-                      onPressed: cargando ? null : () => context.push('/register'),
+                      onPressed: cargando ? null : () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RegistroScreen())),
                       child: const Text('Crear cuenta'),
                     ),
                   ),

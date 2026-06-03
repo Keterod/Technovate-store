@@ -2,6 +2,8 @@ import 'package:flutter/foundation.dart';
 import '../models/assistant_chat_message.dart';
 import '../models/product_model.dart';
 import '../services/ai_assistant_service.dart';
+import '../services/concierge_service.dart';
+import '../services/memory_service.dart';
 import '../services/product_service.dart';
 import 'cart_view_model.dart';
 
@@ -9,29 +11,72 @@ class AssistantViewModel extends ChangeNotifier {
   AssistantViewModel({
     AiAssistantService? assistantService,
     ProductService? productService,
+    ConciergeService? conciergeService,
     required CartViewModel cartViewModel,
   })  : _assistantService = assistantService ?? AiAssistantService(),
         _productService = productService ?? ProductService(),
+        _conciergeService = conciergeService ?? ConciergeService(),
         _cartViewModel = cartViewModel {
-    _messages.add(
-      AssistantChatMessage(
-        text:
-            'Hola, soy el asistente experto de TECHNOVATE. 💻\n\n'
-            'Puedo ayudarte a armar tu PC compatible, buscar productos por presupuesto, o agregarlos a tu carrito de compras.\n\n'
-            'Prueba los botones rápidos de abajo o hazme una consulta.',
-        isUser: false,
-      ),
-    );
+    _initConcierge();
   }
 
   final AiAssistantService _assistantService;
   final ProductService _productService;
+  final ConciergeService _conciergeService;
   final CartViewModel _cartViewModel;
   final List<AssistantChatMessage> _messages = [];
   bool _isLoading = false;
+  bool _conciergeLoaded = false;
+  String _conciergeGreeting = '';
+  List<ProductModel> _suggestions = [];
+  List<Map<String, dynamic>> _priceDrops = [];
+  List<Map<String, dynamic>> _stockAlerts = [];
 
   List<AssistantChatMessage> get messages => List.unmodifiable(_messages);
   bool get isLoading => _isLoading;
+  bool get conciergeLoaded => _conciergeLoaded;
+  String get conciergeGreeting => _conciergeGreeting;
+  List<ProductModel> get suggestions => _suggestions;
+  List<Map<String, dynamic>> get priceDrops => _priceDrops;
+  List<Map<String, dynamic>> get stockAlerts => _stockAlerts;
+
+  Future<void> _initConcierge() async {
+    _messages.add(
+      AssistantChatMessage(
+        text: 'Cargando tu asistente personal...',
+        isUser: false,
+      ),
+    );
+    notifyListeners();
+
+    final memory = MemoryService();
+    final results = await Future.wait([
+      _conciergeService.generarSaludo(),
+      _conciergeService.obtenerSugerencias(),
+      memory.checkPriceDrops(),
+      memory.checkStockReturns(),
+    ]);
+    final greeting = results[0] as String;
+    final suggestions = results[1] as List<ProductModel>;
+    final drops = results[2] as List<Map<String, dynamic>>;
+    final stocks = results[3] as List<Map<String, dynamic>>;
+
+    _conciergeGreeting = greeting;
+    _suggestions = suggestions;
+    _priceDrops = drops;
+    _stockAlerts = stocks;
+    _conciergeLoaded = true;
+
+    _messages.clear();
+    _messages.add(
+      AssistantChatMessage(
+        text: greeting,
+        isUser: false,
+        recommendedProducts: suggestions,
+      ),
+    );
+    notifyListeners();
+  }
 
   Future<void> sendMessage(String message) async {
     final trimmed = message.trim();
@@ -41,15 +86,11 @@ class AssistantViewModel extends ChangeNotifier {
     _isLoading = true;
     notifyListeners();
 
-    // Pasar el carrito actual para realizar comprobaciones de compatibilidad
     final response = await _assistantService.responder(trimmed, _cartViewModel.items);
 
-    // Procesar acciones solicitadas por el asistente
     for (final action in response.actions) {
       if (action.startsWith('ADD_TO_CART:')) {
         final id = action.substring('ADD_TO_CART:'.length);
-        
-        // Buscar producto en recomendados o catálogo
         ProductModel? product;
         final inRecommended = response.recommendedProducts.where((p) => p.id == id);
         if (inRecommended.isNotEmpty) {
@@ -61,7 +102,6 @@ class AssistantViewModel extends ChangeNotifier {
             product = matches.first;
           }
         }
-
         if (product != null) {
           _cartViewModel.addProduct(product);
         }
@@ -94,8 +134,8 @@ class AssistantViewModel extends ChangeNotifier {
     required String formato,
     required String prioridad,
   }) async {
-    final queryText = 'Ármame una recomendación con las siguientes especificaciones técnicas:\n'
-        '- Presupuesto máximo: S/. ${presupuesto.toStringAsFixed(0)}\n'
+    final queryText = 'Armame una recomendacion con las siguientes especificaciones tecnicas:\n'
+        '- Presupuesto maximo: S/. ${presupuesto.toStringAsFixed(0)}\n'
         '- Uso principal: $uso\n'
         '- Marca de preferencia: $marca\n'
         '- Tipo de formato: $formato\n'

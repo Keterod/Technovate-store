@@ -31,17 +31,19 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
   final TextEditingController _tipoRam = TextEditingController();
   final TextEditingController _potenciaFuente = TextEditingController();
 
-  final List<String> _categorias = [
-    'Laptop',
-    'Smartphone',
-    'Tablet',
-    'Monitor',
-    'periférico',
-    'equipo',
-    'hardware',
-    'software',
-  ];
+  static const Map<String, String> _categoriasMap = {
+    'Laptop': 'Laptop',
+    'Smartphone': 'Smartphone',
+    'Tablet': 'Tablet',
+    'Monitor': 'Monitor',
+    'Periféricos': 'periférico',
+    'Componentes': 'hardware',
+    'Equipos': 'equipo',
+    'Software': 'software',
+  };
+  List<String> get _categoriasDisplay => _categoriasMap.keys.toList();
   String? _categoriaSeleccionada;
+  String? _filtroCategoria;
   bool _disponible = true;
   String? _idSeleccionado;
   String _busqueda = '';
@@ -252,8 +254,6 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
     return Scaffold(
       appBar: AppBar(
         title: tituloTechnovate(subtitulo: 'Admin'),
-        backgroundColor: Colors.blueGrey.shade800,
-        foregroundColor: Colors.white,
         centerTitle: true,
       ),
       body: SingleChildScrollView(
@@ -273,16 +273,7 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                         labelText: 'Título',
                         icon: Icon(Icons.label),
                       ),
-                    ),
-                    const SizedBox(height: 10),
-                    TextField(
-                      controller: _detalle,
-                      maxLines: 2,
-                      decoration: const InputDecoration(
-                        labelText: 'Detalle / Descripción corta',
-                        icon: Icon(Icons.description),
                       ),
-                    ),
                     const SizedBox(height: 10),
                     Row(
                       children: [
@@ -299,8 +290,9 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                         Expanded(
                           child: DropdownButtonFormField<String>(
                             value: _categoriaSeleccionada,
-                            items: _categorias
-                                .map((c) => DropdownMenuItem(value: c, child: Text(c)))
+                            items: _categoriasDisplay
+                                .map((display) => DropdownMenuItem(
+                                    value: _categoriasMap[display], child: Text(display)))
                                 .toList(),
                             onChanged: (value) =>
                                 setState(() => _categoriaSeleccionada = value),
@@ -383,7 +375,7 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                     const SizedBox(height: 10),
                     // Expander para las especificaciones técnicas solicitadas
                     ExpansionTile(
-                      leading: const Icon(Icons.settings_suggest, color: Colors.blueGrey),
+                      leading: Icon(Icons.settings_suggest, color: Theme.of(context).colorScheme.primary),
                       title: const Text(
                         'Especificaciones Técnicas (Compatibilidad)',
                         style: TextStyle(fontWeight: FontWeight.bold),
@@ -468,10 +460,7 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                           onPressed: _viewModel.isSaving ? null : _guardarProducto,
                           icon: Icon(_idSeleccionado == null ? Icons.add : Icons.save),
                           label: Text(_idSeleccionado == null ? 'Registrar' : 'Actualizar'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.blueGrey.shade800,
-                            foregroundColor: Colors.white,
-                          ),
+                          style: ElevatedButton.styleFrom(),
                         ),
                         if (_idSeleccionado != null)
                           TextButton.icon(
@@ -486,6 +475,7 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
               ),
             ),
             const Divider(height: 30),
+            const SizedBox(height: 10),
             TextField(
               decoration: const InputDecoration(
                 labelText: 'Buscar por nombre',
@@ -496,12 +486,24 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
             ),
             const SizedBox(height: 10),
             Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
               children: [
-                const Text(
-                  'Listado de productos',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+                Expanded(
+                  child: DropdownButtonFormField<String>(
+                    initialValue: _filtroCategoria,
+                    items: [
+                      const DropdownMenuItem(value: null, child: Text('Todas las categorías')),
+                      ..._categoriasDisplay.map((display) => DropdownMenuItem(
+                          value: _categoriasMap[display], child: Text(display))),
+                    ],
+                    onChanged: (v) => setState(() => _filtroCategoria = v),
+                    decoration: const InputDecoration(
+                      labelText: 'Filtrar por categoría',
+                      isDense: true,
+                      contentPadding: EdgeInsets.symmetric(horizontal: 12, vertical: 10),
+                    ),
+                  ),
                 ),
+                const SizedBox(width: 8),
                 IconButton(
                   onPressed: () {
                     setState(() => _ordenarPorPuntuacion = !_ordenarPorPuntuacion);
@@ -525,7 +527,15 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                   return const Center(child: CircularProgressIndicator());
                 }
                 var products = snapshot.data!.where((product) {
-                  return product.titulo.toLowerCase().contains(_busqueda);
+                  if (_busqueda.isNotEmpty &&
+                      !product.titulo.toLowerCase().contains(_busqueda)) {
+                    return false;
+                  }
+                  if (_filtroCategoria != null &&
+                      product.categoria.toLowerCase() != _filtroCategoria!.toLowerCase()) {
+                    return false;
+                  }
+                  return true;
                 }).toList();
 
                 if (_ordenarPorPuntuacion) {

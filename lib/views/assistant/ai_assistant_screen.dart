@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import '../../core/widgets/technovate_widgets.dart';
 import '../../models/assistant_chat_message.dart';
 import '../../models/product_model.dart';
+import '../../services/onboarding_service.dart';
+import '../../services/voice_service.dart';
 import '../../viewmodels/assistant_view_model.dart';
 import '../../viewmodels/cart_view_model.dart';
 
@@ -20,16 +22,78 @@ class AiAssistantScreen extends StatefulWidget {
   State<AiAssistantScreen> createState() => _AiAssistantScreenState();
 }
 
-class _AiAssistantScreenState extends State<AiAssistantScreen> {
+class _AiAssistantScreenState extends State<AiAssistantScreen>
+    with SingleTickerProviderStateMixin {
   late final AssistantViewModel _viewModel;
   final TextEditingController _messageController = TextEditingController();
   final ScrollController _scrollController = ScrollController();
+  final VoiceService _voiceService = VoiceService();
+  late final AnimationController _pulseController;
+  late final Animation<double> _pulseAnim;
 
   @override
   void initState() {
     super.initState();
     _viewModel = AssistantViewModel(cartViewModel: widget.cartViewModel);
     _viewModel.addListener(_onViewModelChanged);
+    _voiceService.addListener(_onVoiceChanged);
+    _voiceService.initialize();
+    _pulseController = AnimationController(
+      vsync: this,
+      duration: const Duration(milliseconds: 800),
+    );
+    _pulseAnim = Tween<double>(begin: 1.0, end: 1.3).animate(
+      CurvedAnimation(parent: _pulseController, curve: Curves.easeInOut),
+    );
+    _mostrarOnboarding();
+  }
+
+  Future<void> _mostrarOnboarding() async {
+    if (!mounted) return;
+    final mostrar = await OnboardingService.shouldShowOnboarding();
+    if (!mostrar || !mounted) return;
+    await OnboardingService.markOnboardingComplete();
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+         title: Row(
+          children: [
+            Icon(Icons.auto_awesome, color: Theme.of(context).colorScheme.primary),
+            const SizedBox(width: 8),
+            const Text('Asistente AI'),
+          ],
+        ),
+        content: const Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              '¡Bienvenido al Asistente Experto TECHNOVATE!',
+              style: TextStyle(fontWeight: FontWeight.bold, fontSize: 15),
+            ),
+            SizedBox(height: 12),
+            Text('Puedes preguntarme cosas como:'),
+            SizedBox(height: 8),
+            _TipTexto('💻 "Recomiéndame una laptop gaming"'),
+            _TipTexto('🔧 "Arma una PC con S/ 3000"'),
+            _TipTexto('🎮 "Busco una GPU para edición"'),
+            _TipTexto('📱 "Muéstrame smartphones con buena cámara"'),
+            _TipTexto('🗣️ "Usa el micrófono para hablar"'),
+            SizedBox(height: 12),
+            Text(
+              'También puedo agregar productos al carrito por ti.',
+              style: TextStyle(fontSize: 13, color: Colors.grey),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context),
+            child: const Text('¡Entendido!'),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -38,7 +102,37 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     _viewModel.dispose();
     _messageController.dispose();
     _scrollController.dispose();
+    _voiceService.removeListener(_onVoiceChanged);
+    _voiceService.dispose();
+    _pulseController.dispose();
     super.dispose();
+  }
+
+  void _onVoiceChanged() {
+    if (!mounted) return;
+    if (_voiceService.isListening) {
+      _messageController.text = _voiceService.recognizedText;
+      _messageController.selection = TextSelection.fromPosition(
+        TextPosition(offset: _voiceService.recognizedText.length),
+      );
+      _pulseController.repeat(reverse: true);
+    } else {
+      _pulseController.stop();
+      _pulseController.reset();
+      final text = _voiceService.recognizedText.trim();
+      if (text.isNotEmpty) {
+        _sendMessage();
+      }
+    }
+    setState(() {});
+  }
+
+  void _toggleVoice() {
+    if (_voiceService.isListening) {
+      _voiceService.stop();
+    } else {
+      _voiceService.startListening();
+    }
   }
 
   void _onViewModelChanged() {
@@ -84,7 +178,7 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text('${product.titulo} agregado al carrito 🛒'),
-        backgroundColor: Colors.indigo,
+        backgroundColor: Theme.of(context).colorScheme.primary,
       ),
     );
   }
@@ -116,8 +210,6 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       backgroundColor: Colors.grey.shade50,
       appBar: AppBar(
         title: tituloTechnovate(subtitulo: 'Asistente Experto'),
-        backgroundColor: Colors.deepPurple.shade900,
-        foregroundColor: Colors.white,
         centerTitle: true,
         actions: [
           IconButton(
@@ -129,86 +221,113 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
       ),
       body: Column(
         children: [
-          _QuickActionChips(onSelected: _useSuggestion),
-          Expanded(
-            child: ListView.builder(
-              controller: _scrollController,
-              padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-              itemCount: _viewModel.messages.length + (_viewModel.isLoading ? 1 : 0),
-              itemBuilder: (context, index) {
-                if (_viewModel.isLoading && index == _viewModel.messages.length) {
-                  return const _TypingBubble();
-                }
-                final message = _viewModel.messages[index];
-                return Column(
-                  crossAxisAlignment: message.isUser
-                      ? CrossAxisAlignment.end
-                      : CrossAxisAlignment.start,
-                  children: [
-                    _MessageBubble(message: message),
-                    if (message.recommendedProducts.isNotEmpty)
-                      _RecommendationList(
-                        products: message.recommendedProducts,
-                        onAddProduct: _addProduct,
-                        onViewDetails: (p) => _mostrarDetallesProducto(p),
-                      ),
-                  ],
-                );
-              },
-            ),
-          ),
-          SafeArea(
-            top: false,
-            child: Container(
-              padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
-              color: Colors.white,
-              child: Row(
-                children: [
-                  IconButton(
-                    icon: const Icon(Icons.psychology_alt, color: Colors.deepPurple, size: 28),
-                    tooltip: 'Formulario Recomendador',
-                    onPressed: _mostrarFormularioRecomendador,
-                  ),
-                  const SizedBox(width: 4),
-                  Expanded(
-                    child: TextField(
-                      controller: _messageController,
-                      minLines: 1,
-                      maxLines: 4,
-                      textInputAction: TextInputAction.send,
-                      onSubmitted: (_) => _sendMessage(),
-                      decoration: InputDecoration(
-                        hintText: 'Ej: recomiéndame placa socket AM4 y RAM...',
-                        filled: true,
-                        fillColor: Colors.grey.shade100,
-                        border: OutlineInputBorder(
-                          borderRadius: BorderRadius.circular(24),
-                          borderSide: BorderSide.none,
-                        ),
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 12,
-                        ),
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 8),
-                  IconButton.filled(
-                    onPressed: _viewModel.isLoading ? null : _sendMessage,
-                    style: IconButton.styleFrom(
-                      backgroundColor: Colors.deepPurple.shade700,
-                      foregroundColor: Colors.white,
-                    ),
-                    icon: const Icon(Icons.send),
-                    tooltip: 'Enviar mensaje',
-                  ),
-                ],
+              if (_viewModel.conciergeLoaded &&
+                  (_viewModel.priceDrops.isNotEmpty || _viewModel.stockAlerts.isNotEmpty))
+                _ConciergeAlertsBanner(
+                  priceDrops: _viewModel.priceDrops,
+                  stockAlerts: _viewModel.stockAlerts,
+                ),
+              _QuickActionChips(onSelected: _useSuggestion),
+              Expanded(
+                child: ListView.builder(
+                  controller: _scrollController,
+                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                  itemCount: _viewModel.messages.length + (_viewModel.isLoading ? 1 : 0),
+                  itemBuilder: (context, index) {
+                    if (_viewModel.isLoading && index == _viewModel.messages.length) {
+                      return const _TypingBubble();
+                    }
+                    final message = _viewModel.messages[index];
+                    return Column(
+                      crossAxisAlignment: message.isUser
+                          ? CrossAxisAlignment.end
+                          : CrossAxisAlignment.start,
+                      children: [
+                        _MessageBubble(message: message),
+                        if (message.recommendedProducts.isNotEmpty)
+                          _RecommendationList(
+                            products: message.recommendedProducts,
+                            onAddProduct: _addProduct,
+                            onViewDetails: (p) => _mostrarDetallesProducto(p),
+                          ),
+                      ],
+                    );
+                  },
+                ),
               ),
-            ),
+              SafeArea(
+                top: false,
+                child: Container(
+                  padding: const EdgeInsets.fromLTRB(12, 6, 12, 12),
+                  color: Colors.white,
+                  child: Row(
+                    children: [
+                      IconButton(
+                        icon: Icon(Icons.psychology_alt, color: Theme.of(context).colorScheme.primary, size: 28),
+                        tooltip: 'Formulario Recomendador',
+                        onPressed: _mostrarFormularioRecomendador,
+                      ),
+                      const SizedBox(width: 4),
+                      Expanded(
+                        child: TextField(
+                          controller: _messageController,
+                          minLines: 1,
+                          maxLines: 4,
+                          textInputAction: TextInputAction.send,
+                          onSubmitted: (_) => _sendMessage(),
+                          decoration: InputDecoration(
+                            hintText: 'Ej: recomiéndame placa socket AM4 y RAM...',
+                            filled: true,
+                            fillColor: Colors.grey.shade100,
+                            border: OutlineInputBorder(
+                              borderRadius: BorderRadius.circular(24),
+                              borderSide: BorderSide.none,
+                            ),
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 12,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      ScaleTransition(
+                        scale: _pulseAnim,
+                        child: IconButton(
+                          onPressed: _voiceService.isAvailable && !_viewModel.isLoading
+                              ? _toggleVoice
+                              : null,
+                          icon: Icon(
+                            _voiceService.isListening
+                                ? Icons.mic
+                                : Icons.mic_none,
+                            color: _voiceService.isListening
+                                ? Colors.red
+                                : Theme.of(context).colorScheme.primary,
+                            size: 26,
+                          ),
+                          tooltip: _voiceService.isListening
+                              ? 'Detener grabación'
+                              : 'Buscar por voz',
+                        ),
+                      ),
+                      const SizedBox(width: 4),
+                      IconButton.filled(
+                        onPressed: _viewModel.isLoading ? null : _sendMessage,
+                        style: IconButton.styleFrom(
+                          backgroundColor: Theme.of(context).colorScheme.primary,
+                          foregroundColor: Theme.of(context).colorScheme.onPrimary,
+                        ),
+                        icon: const Icon(Icons.send),
+                        tooltip: 'Enviar mensaje',
+                      ),
+                    ],
+                  ),
+                ),
+              ),
+            ],
           ),
-        ],
-      ),
-    );
+        );
   }
 
   void _mostrarDetallesProducto(ProductModel product) {
@@ -229,10 +348,10 @@ class _AiAssistantScreenState extends State<AiAssistantScreen> {
                 const SizedBox(height: 12),
                 Text(
                   'S/. ${product.costo.toStringAsFixed(2)}',
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontSize: 20,
                     fontWeight: FontWeight.bold,
-                    color: Colors.indigo,
+                    color: Theme.of(context).colorScheme.primary,
                   ),
                 ),
                 const SizedBox(height: 6),
@@ -310,9 +429,9 @@ class _QuickActionChips extends StatelessWidget {
         itemBuilder: (context, index) {
           final item = chips[index];
           return ActionChip(
-            backgroundColor: Colors.deepPurple.shade50,
-            side: BorderSide(color: Colors.deepPurple.shade200, width: 0.5),
-            labelStyle: TextStyle(color: Colors.deepPurple.shade900, fontWeight: FontWeight.w600),
+            backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+            side: BorderSide(color: Theme.of(context).colorScheme.outlineVariant, width: 0.5),
+            labelStyle: TextStyle(color: Theme.of(context).colorScheme.onPrimaryContainer, fontWeight: FontWeight.w600),
             label: Text(item['label']!),
             onPressed: () => onSelected(item['prompt']!),
           );
@@ -338,7 +457,10 @@ class _MessageBubble extends StatelessWidget {
     final decoration = isUser
         ? BoxDecoration(
             gradient: LinearGradient(
-              colors: [Colors.indigo.shade600, Colors.deepPurple.shade600],
+              colors: [
+                Theme.of(context).colorScheme.primary,
+                Theme.of(context).colorScheme.secondary,
+              ],
               begin: Alignment.topLeft,
               end: Alignment.bottomRight,
             ),
@@ -349,7 +471,7 @@ class _MessageBubble extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.indigo.withOpacity(0.15),
+                color: Theme.of(context).colorScheme.primary.withOpacity(0.15),
                 blurRadius: 6,
                 offset: const Offset(1, 3),
               )
@@ -434,10 +556,10 @@ class _RecommendationList extends StatelessWidget {
             decoration: BoxDecoration(
               color: Colors.white,
               borderRadius: BorderRadius.circular(12),
-              border: Border.all(color: Colors.deepPurple.shade100, width: 1.5),
+              border: Border.all(color: Theme.of(context).colorScheme.outlineVariant, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.deepPurple.shade900.withOpacity(0.05),
+                  color: Theme.of(context).colorScheme.primary.withOpacity(0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 )
@@ -508,8 +630,8 @@ class _RecommendationList extends StatelessWidget {
                     children: [
                       Text(
                         'S/. ${product.costo.toStringAsFixed(2)}',
-                        style: const TextStyle(
-                          color: Colors.indigo,
+                        style: TextStyle(
+                          color: Theme.of(context).colorScheme.primary,
                           fontWeight: FontWeight.bold,
                           fontSize: 15,
                         ),
@@ -535,7 +657,7 @@ class _RecommendationList extends StatelessWidget {
                           style: OutlinedButton.styleFrom(
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 32),
-                            side: BorderSide(color: Colors.deepPurple.shade300),
+                            side: BorderSide(color: Theme.of(context).colorScheme.outline),
                           ),
                           child: const Text('Ver', style: TextStyle(fontSize: 12)),
                         ),
@@ -548,7 +670,7 @@ class _RecommendationList extends StatelessWidget {
                           style: ElevatedButton.styleFrom(
                             padding: EdgeInsets.zero,
                             minimumSize: const Size(0, 32),
-                            backgroundColor: Colors.deepPurple.shade700,
+                            backgroundColor: Theme.of(context).colorScheme.primary,
                             foregroundColor: Colors.white,
                           ),
                           icon: const Icon(Icons.add_shopping_cart, size: 14),
@@ -580,7 +702,7 @@ class _TypingBubble extends StatelessWidget {
         decoration: BoxDecoration(
           color: Colors.white,
           borderRadius: BorderRadius.circular(16),
-          border: Border.all(color: Colors.deepPurple.shade100),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
         ),
         child: Row(
           mainAxisSize: MainAxisSize.min,
@@ -590,17 +712,76 @@ class _TypingBubble extends StatelessWidget {
               height: 16,
               child: CircularProgressIndicator(
                 strokeWidth: 2,
-                color: Colors.deepPurple.shade800,
+                color: Theme.of(context).colorScheme.primary,
               ),
             ),
             const SizedBox(width: 8),
             Text(
               'Asistente analizando compatibilidad...',
-              style: TextStyle(color: Colors.deepPurple.shade800, fontSize: 13),
+              style: TextStyle(color: Theme.of(context).colorScheme.primary, fontSize: 13),
             ),
           ],
         ),
       ),
+    );
+  }
+}
+
+class _ConciergeAlertsBanner extends StatelessWidget {
+  final List<Map<String, dynamic>> priceDrops;
+  final List<Map<String, dynamic>> stockAlerts;
+
+  const _ConciergeAlertsBanner({
+    required this.priceDrops,
+    required this.stockAlerts,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Container(
+      width: double.infinity,
+      color: Colors.amber.shade50,
+      child: SingleChildScrollView(
+        scrollDirection: Axis.horizontal,
+        padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+        child: Row(
+          children: [
+            for (final drop in priceDrops)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  avatar: const Icon(Icons.trending_down, size: 18, color: Colors.green),
+                  label: Text('${drop['titulo']} - S/ ${(drop['diferencia'] as num).toStringAsFixed(0)} menos'),
+                  backgroundColor: Colors.green.shade50,
+                  side: BorderSide(color: Colors.green.shade200),
+                ),
+              ),
+            for (final stock in stockAlerts)
+              Padding(
+                padding: const EdgeInsets.only(right: 8),
+                child: Chip(
+                  avatar: const Icon(Icons.inventory, size: 18, color: Colors.blue),
+                  label: Text('${stock['titulo']} - ${stock['stock']} en stock'),
+                  backgroundColor: Colors.blue.shade50,
+                  side: BorderSide(color: Colors.blue.shade200),
+                ),
+              ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _TipTexto extends StatelessWidget {
+  final String text;
+  const _TipTexto(this.text);
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.symmetric(vertical: 2),
+      child: Text(text, style: const TextStyle(fontSize: 14)),
     );
   }
 }
@@ -672,18 +853,18 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
             ),
             const SizedBox(height: 16),
             const Text(
-              'Configurar Presupuesto y Preferencias ⚙️',
-              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold, color: Colors.deepPurple),
+              'Configurar Presupuesto y Preferencias',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
               textAlign: TextAlign.center,
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _budgetController,
               keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Presupuesto máximo (S/.)',
-                icon: Icon(Icons.attach_money, color: Colors.deepPurple),
-                border: OutlineInputBorder(),
+                icon: Icon(Icons.attach_money, color: Theme.of(context).colorScheme.primary),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 14),
@@ -691,10 +872,10 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
               value: _selectedUse,
               items: _uses.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
               onChanged: (val) => setState(() => _selectedUse = val!),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Uso principal',
-                icon: Icon(Icons.sports_esports, color: Colors.deepPurple),
-                border: OutlineInputBorder(),
+                icon: Icon(Icons.sports_esports, color: Theme.of(context).colorScheme.primary),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 14),
@@ -702,10 +883,10 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
               value: _selectedBrand,
               items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
               onChanged: (val) => setState(() => _selectedBrand = val!),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Marca favorita',
-                icon: Icon(Icons.bolt, color: Colors.deepPurple),
-                border: OutlineInputBorder(),
+                icon: Icon(Icons.bolt, color: Theme.of(context).colorScheme.primary),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 14),
@@ -713,10 +894,10 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
               value: _selectedForm,
               items: _formats.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
               onChanged: (val) => setState(() => _selectedForm = val!),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Formato',
-                icon: Icon(Icons.computer, color: Colors.deepPurple),
-                border: OutlineInputBorder(),
+                icon: Icon(Icons.computer, color: Theme.of(context).colorScheme.primary),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 14),
@@ -724,10 +905,10 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
               value: _selectedPriority,
               items: _priorities.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
               onChanged: (val) => setState(() => _selectedPriority = val!),
-              decoration: const InputDecoration(
+              decoration: InputDecoration(
                 labelText: 'Prioridad',
-                icon: Icon(Icons.star, color: Colors.deepPurple),
-                border: OutlineInputBorder(),
+                icon: Icon(Icons.star, color: Theme.of(context).colorScheme.primary),
+                border: const OutlineInputBorder(),
               ),
             ),
             const SizedBox(height: 20),
@@ -743,8 +924,6 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
                 );
               },
               style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.deepPurple.shade900,
-                foregroundColor: Colors.white,
                 padding: const EdgeInsets.symmetric(vertical: 14),
               ),
               child: const Text('Generar Recomendación Compatible', style: TextStyle(fontSize: 16)),

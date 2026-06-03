@@ -1,11 +1,12 @@
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../viewmodels/cart_view_model.dart';
 import '../admin/digizone_admin_screen.dart';
 import '../assistant/ai_assistant_screen.dart';
 import '../cart/cart_screen.dart';
-import '../location/ubicacion_screen.dart';
 import '../store/digizone_tienda_screen.dart';
+import 'home_landing_screen.dart';
 
 class DigizoneScreen extends StatefulWidget {
   const DigizoneScreen({super.key});
@@ -17,9 +18,91 @@ class DigizoneScreen extends StatefulWidget {
 class _DigizoneScreenState extends State<DigizoneScreen>
     with TickerProviderStateMixin {
   int _selectedIndex = 0;
+  String? _categoriaStore;
   final CartViewModel cartViewModel = CartViewModel();
   late final AnimationController _iconAnimationController;
   late final Animation<double> _iconScale;
+
+  bool get _esAdmin =>
+      FirebaseAuth.instance.currentUser?.email?.toLowerCase() ==
+      'admin@gmail.com';
+
+  List<Widget> get _screens {
+    if (_esAdmin) {
+      return [
+        const DigizoneAdminScreen(),
+        DigizoneTiendaScreen(
+          cartViewModel: cartViewModel,
+          onProductAdded: _onProductAdded,
+          onViewCart: () => setState(() => _selectedIndex = _indiceCarrito),
+        ),
+        CartScreen(cartViewModel: cartViewModel),
+        AiAssistantScreen(
+          cartViewModel: cartViewModel,
+          onProductAdded: _onProductAdded,
+        ),
+      ];
+    }
+    return [
+      HomeLandingScreen(
+        onNavigateTienda: (categoria) {
+          _categoriaStore = categoria;
+          setState(() => _selectedIndex = 1);
+        },
+        onNavigateAsistente: () => setState(() => _selectedIndex = 3),
+        onNavigateCarrito: () => setState(() => _selectedIndex = 2),
+        cartViewModel: cartViewModel,
+      ),
+      DigizoneTiendaScreen(
+        cartViewModel: cartViewModel,
+        onProductAdded: _onProductAdded,
+        onViewCart: () => setState(() => _selectedIndex = _indiceCarrito),
+        categoriaInicial: _categoriaStore,
+      ),
+      CartScreen(cartViewModel: cartViewModel),
+      AiAssistantScreen(
+        cartViewModel: cartViewModel,
+        onProductAdded: _onProductAdded,
+      ),
+    ];
+  }
+
+  List<BottomNavigationBarItem> get _navItems {
+    if (_esAdmin) {
+      return [
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.admin_panel_settings),
+          label: 'Admin',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.store),
+          label: 'Tienda',
+        ),
+        BottomNavigationBarItem(icon: _cartIcon(), label: 'Carrito'),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.auto_awesome),
+          label: 'Asistente',
+        ),
+      ];
+    }
+    return [
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.home),
+        label: 'Inicio',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.store),
+        label: 'Tienda',
+      ),
+      BottomNavigationBarItem(icon: _cartIcon(), label: 'Carrito'),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.auto_awesome),
+        label: 'Asistente',
+      ),
+    ];
+  }
+
+  int get _indiceCarrito => _esAdmin ? 2 : 2;
 
   @override
   void initState() {
@@ -70,112 +153,23 @@ class _DigizoneScreenState extends State<DigizoneScreen>
   }
 
   void _onTabTapped(int index) {
-    if (index == 0) {
-      showDialog<String>(
-        context: context,
-        builder: (context) {
-          final pinController = TextEditingController();
-          return AlertDialog(
-            title: const Row(
-              children: [
-                Icon(Icons.lock, color: Colors.indigo),
-                SizedBox(width: 8),
-                Text('Acceso Restringido'),
-              ],
-            ),
-            content: TextField(
-              controller: pinController,
-              obscureText: true,
-              keyboardType: TextInputType.number,
-              decoration: const InputDecoration(
-                labelText: 'Ingrese PIN de Administrador',
-                hintText: 'PIN por defecto: 1337',
-              ),
-            ),
-            actions: [
-              TextButton(
-                onPressed: () => Navigator.pop(context),
-                child: const Text('Cancelar'),
-              ),
-              ElevatedButton(
-                onPressed: () {
-                  final pin = pinController.text.trim();
-                  Navigator.pop(context, pin);
-                },
-                child: const Text('Ingresar'),
-              ),
-            ],
-          );
-        },
-      ).then((result) {
-        if (!mounted) return;
-        if (result == '1337') {
-          setState(() => _selectedIndex = 0);
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Acceso concedido como Administrador 🔓'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        } else if (result != null) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('PIN incorrecto. Acceso denegado 🔐'),
-              backgroundColor: Colors.red,
-            ),
-          );
-        }
-      });
-    } else {
-      setState(() => _selectedIndex = index);
-    }
+    setState(() => _selectedIndex = index);
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       body: IndexedStack(
-        index: _selectedIndex,
-        children: [
-          const DigizoneAdminScreen(),
-          DigizoneTiendaScreen(
-            cartViewModel: cartViewModel,
-            onProductAdded: _onProductAdded,
-            onViewCart: () => setState(() => _selectedIndex = 2),
-          ),
-          CartScreen(cartViewModel: cartViewModel),
-          const UbicacionScreen(),
-          AiAssistantScreen(
-            cartViewModel: cartViewModel,
-            onProductAdded: _onProductAdded,
-          ),
-        ],
+        index: _selectedIndex.clamp(0, _screens.length - 1),
+        children: _screens,
       ),
       bottomNavigationBar: BottomNavigationBar(
         type: BottomNavigationBarType.fixed,
-        currentIndex: _selectedIndex,
+        currentIndex: _selectedIndex.clamp(0, _navItems.length - 1),
         onTap: _onTabTapped,
-        selectedItemColor: Colors.indigo,
-        unselectedItemColor: Colors.grey,
-        items: [
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.admin_panel_settings),
-            label: 'Admin',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.store),
-            label: 'Tienda',
-          ),
-          BottomNavigationBarItem(icon: _cartIcon(), label: 'Carrito'),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.location_on),
-            label: 'Ubicacion',
-          ),
-          const BottomNavigationBarItem(
-            icon: Icon(Icons.auto_awesome),
-            label: 'Asistente',
-          ),
-        ],
+        selectedItemColor: Theme.of(context).colorScheme.primary,
+        unselectedItemColor: Theme.of(context).colorScheme.onSurfaceVariant,
+        items: _navItems,
       ),
     );
   }

@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../../core/widgets/technovate_widgets.dart';
 import '../../viewmodels/cart_view_model.dart';
+import '../../viewmodels/order_view_model.dart';
+import '../checkout/checkout_screen.dart';
+import '../orders/order_history_screen.dart';
 
 class CartScreen extends StatefulWidget {
   final CartViewModel cartViewModel;
@@ -31,26 +34,33 @@ class _CartScreenState extends State<CartScreen> {
     if (mounted) setState(() {});
   }
 
-  Future<void> _finishPurchase() async {
+  void _irAlCheckout() {
     if (_cart.items.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('El carrito esta vacio')),
       );
       return;
     }
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => CheckoutScreen(
+          cartViewModel: _cart,
+          orderViewModel: OrderViewModel(),
+        ),
+      ),
+    );
+  }
 
-    try {
-      await _cart.finalizarCompra();
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Compra realizada con exito')),
-      );
-    } catch (e) {
-      if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al finalizar compra: $e')),
-      );
-    }
+  void _irHistorial() {
+    Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) => OrderHistoryScreen(
+          orderViewModel: OrderViewModel(),
+        ),
+      ),
+    );
   }
 
   @override
@@ -60,9 +70,14 @@ class _CartScreenState extends State<CartScreen> {
     return Scaffold(
       appBar: AppBar(
         title: tituloTechnovate(subtitulo: 'Carrito'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
         centerTitle: true,
+        actions: [
+          IconButton(
+            icon: const Icon(Icons.receipt_long),
+            tooltip: 'Mis pedidos',
+            onPressed: _irHistorial,
+          ),
+        ],
       ),
       body: items.isEmpty
           ? const Center(
@@ -84,15 +99,17 @@ class _CartScreenState extends State<CartScreen> {
                           leading: SizedBox(
                             width: 56,
                             height: 56,
-                            child: imagenProducto(
-                              item.imagen,
-                              height: 56,
-                              width: 56,
+                            child: Hero(
+                              tag: 'cart_img_${item.idProducto}',
+                              child: imagenProducto(
+                                item.imagen,
+                                height: 56,
+                                width: 56,
+                              ),
                             ),
                           ),
                           title: Text(item.titulo),
                           subtitle: Text(
-                            '${item.detalle}\n'
                             'Cantidad: ${item.cantidad} | '
                             'S/. ${item.costo.toStringAsFixed(2)} c/u',
                           ),
@@ -109,7 +126,9 @@ class _CartScreenState extends State<CartScreen> {
                   padding: const EdgeInsets.all(16),
                   decoration: BoxDecoration(
                     color: Colors.grey.shade100,
-                    border: Border(top: BorderSide(color: Colors.grey.shade300)),
+                    border: Border(
+                      top: BorderSide(color: Colors.grey.shade300),
+                    ),
                   ),
                   child: Column(
                     crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -124,27 +143,12 @@ class _CartScreenState extends State<CartScreen> {
                       ),
                       const SizedBox(height: 12),
                       ElevatedButton.icon(
-                        onPressed:
-                            _cart.isCheckingOut ? null : _finishPurchase,
-                        icon: _cart.isCheckingOut
-                            ? const SizedBox(
-                                width: 20,
-                                height: 20,
-                                child: CircularProgressIndicator(
-                                  strokeWidth: 2,
-                                  color: Colors.white,
-                                ),
-                              )
-                            : const Icon(Icons.payment),
-                        label: Text(
-                          _cart.isCheckingOut
-                              ? 'Procesando...'
-                              : 'Finalizar compra',
-                        ),
+                        onPressed: _irAlCheckout,
+                        icon: const Icon(Icons.payment),
+                        label: const Text('Finalizar compra'),
                         style: ElevatedButton.styleFrom(
-                          padding: const EdgeInsets.symmetric(vertical: 14),
-                          backgroundColor: Colors.indigo,
-                          foregroundColor: Colors.white,
+                          padding:
+                              const EdgeInsets.symmetric(vertical: 14),
                         ),
                       ),
                     ],

@@ -125,8 +125,6 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
     return Scaffold(
       appBar: AppBar(
         title: tituloTechnovate(subtitulo: 'Ubicación'),
-        backgroundColor: Colors.indigo,
-        foregroundColor: Colors.white,
         centerTitle: true,
         actions: [
           IconButton(
@@ -164,10 +162,7 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
                 onPressed: () => _viewModel.recargar(),
                 icon: const Icon(Icons.refresh),
                 label: const Text('Reintentar'),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
-                ),
+                style: ElevatedButton.styleFrom(),
               ),
             ],
           ),
@@ -214,16 +209,16 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
             children: [
               Text(
                 _viewModel.nombreTienda,
-                style: const TextStyle(
+                style: TextStyle(
                   fontSize: 18,
                   fontWeight: FontWeight.bold,
-                  color: Colors.indigo,
+                  color: Theme.of(context).colorScheme.primary,
                 ),
               ),
               const SizedBox(height: 8),
               Row(
                 children: [
-                  const Icon(Icons.straighten, color: Colors.indigo),
+                  Icon(Icons.straighten, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),
                   Text(
                     _viewModel.distancia.isEmpty
@@ -236,7 +231,7 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
               const SizedBox(height: 6),
               Row(
                 children: [
-                  const Icon(Icons.access_time, color: Colors.indigo),
+                  Icon(Icons.access_time, color: Theme.of(context).colorScheme.primary),
                   const SizedBox(width: 8),
                   Text(
                     _viewModel.duracion.isEmpty
@@ -253,8 +248,6 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
                 label: const Text('Abrir en Google Maps'),
                 style: ElevatedButton.styleFrom(
                   padding: const EdgeInsets.symmetric(vertical: 14),
-                  backgroundColor: Colors.indigo,
-                  foregroundColor: Colors.white,
                 ),
               ),
             ],
