@@ -12,7 +12,12 @@
           "package_name": "com.example.flutter_firebase"
         }
       },
-      "oauth_client": [],
+      "oauth_client": [
+        {
+          "client_id": "346974235549-i4pr2vajb6ud1536mvjs0cv3rspf45eo.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
       "api_key": [
         {
           "current_key": "AIzaSyAZy37i2uZCsM-wCdUd9uuQV3kAycdAP4o"
