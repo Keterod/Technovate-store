@@ -1,10 +1,7 @@
 import 'package:flutter/material.dart';
 
-const String digizoneColeccion = 'digizone_productos';
-const String technovateLogoAsset = 'assets/images/technovate_logo.png';
-const String technovateNombre = 'TECHNOVATE';
+import '../constants/app_constants.dart';
 
-/// Logo desde asset. Usar cuando exista `assets/images/technovate_logo.png`.
 Widget logoTechnovate({double height = 28}) {
   return Image.asset(
     technovateLogoAsset,
@@ -17,7 +14,6 @@ Widget logoTechnovate({double height = 28}) {
   );
 }
 
-/// Título de AppBar con logo TECHNOVATE.
 Widget tituloTechnovate({String? subtitulo}) {
   return Row(
     mainAxisSize: MainAxisSize.min,
@@ -41,9 +37,8 @@ String convertirEnlaceDriveADirecto(String enlaceDrive) {
   if (match != null && match.groupCount >= 1) {
     final id = match.group(1);
     return 'https://drive.google.com/uc?export=view&id=$id';
-  } else {
-    return enlaceDrive;
   }
+  return enlaceDrive;
 }
 
 Widget imagenProducto(String? url, {double height = 120, double? width}) {

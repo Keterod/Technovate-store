@@ -1,4 +1,6 @@
-class CarritoItem {
+import 'product_model.dart';
+
+class CartItemModel {
   final String idProducto;
   final String titulo;
   final String detalle;
@@ -7,7 +9,7 @@ class CarritoItem {
   int cantidad;
   final int inventario;
 
-  CarritoItem({
+  CartItemModel({
     required this.idProducto,
     required this.titulo,
     required this.detalle,
@@ -16,6 +18,18 @@ class CarritoItem {
     required this.cantidad,
     required this.inventario,
   });
+
+  factory CartItemModel.fromProduct(ProductModel product) {
+    return CartItemModel(
+      idProducto: product.id,
+      titulo: product.titulo,
+      detalle: product.detalle,
+      costo: product.costo,
+      imagen: product.imagen,
+      cantidad: 1,
+      inventario: product.inventario,
+    );
+  }
 
   double get subtotal => costo * cantidad;
 }

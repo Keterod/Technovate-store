@@ -1,18 +1,20 @@
-import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
-import 'carrito_state.dart';
-import 'digizone_utils.dart';
+
+import '../../core/widgets/technovate_widgets.dart';
+import '../../models/product_model.dart';
+import '../../services/product_service.dart';
+import '../../viewmodels/cart_view_model.dart';
 
 class DigizoneTiendaScreen extends StatefulWidget {
-  final CarritoState carritoState;
-  final VoidCallback onProductoAgregado;
-  final VoidCallback onVerCarrito;
+  final CartViewModel cartViewModel;
+  final VoidCallback onProductAdded;
+  final VoidCallback onViewCart;
 
   const DigizoneTiendaScreen({
     super.key,
-    required this.carritoState,
-    required this.onProductoAgregado,
-    required this.onVerCarrito,
+    required this.cartViewModel,
+    required this.onProductAdded,
+    required this.onViewCart,
   });
 
   @override
@@ -21,53 +23,42 @@ class DigizoneTiendaScreen extends StatefulWidget {
 
 class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
     with SingleTickerProviderStateMixin {
-  late final AnimationController _botonAnimController;
-  late final Animation<double> _botonScale;
+  final ProductService _productService = ProductService();
+  late final AnimationController _buttonAnimationController;
+  late final Animation<double> _buttonScale;
 
   @override
   void initState() {
     super.initState();
-    _botonAnimController = AnimationController(
+    _buttonAnimationController = AnimationController(
       vsync: this,
       duration: const Duration(milliseconds: 250),
     );
-    _botonScale = Tween<double>(begin: 1.0, end: 0.92).animate(
-      CurvedAnimation(parent: _botonAnimController, curve: Curves.easeInOut),
+    _buttonScale = Tween<double>(begin: 1, end: 0.92).animate(
+      CurvedAnimation(
+        parent: _buttonAnimationController,
+        curve: Curves.easeInOut,
+      ),
     );
   }
 
   @override
   void dispose() {
-    _botonAnimController.dispose();
+    _buttonAnimationController.dispose();
     super.dispose();
   }
 
-  void _agregarAlCarrito(String id, Map<String, dynamic> data) {
-    final inventario = ((data['inventario'] ?? 0) as num).toInt();
-    final disponible = data['disponible'] != false;
-
-    final error = widget.carritoState.agregar(
-      idProducto: id,
-      titulo: (data['titulo'] ?? '').toString(),
-      detalle: (data['detalle'] ?? '').toString(),
-      costo: ((data['costo'] ?? 0) as num).toDouble(),
-      imagen: (data['imagen'] ?? '').toString(),
-      inventario: inventario,
-      disponible: disponible,
-    );
+  void _addToCart(ProductModel product) {
+    final error = widget.cartViewModel.addProduct(product);
 
     if (error != null) {
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error)),
-      );
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(error)));
       return;
     }
 
-    setState(() {});
-    widget.onProductoAgregado();
-
-    _botonAnimController.forward(from: 0).then((_) {
-      if (mounted) _botonAnimController.reverse();
+    widget.onProductAdded();
+    _buttonAnimationController.forward(from: 0).then((_) {
+      if (mounted) _buttonAnimationController.reverse();
     });
 
     ScaffoldMessenger.of(context).showSnackBar(
@@ -82,7 +73,7 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
         action: SnackBarAction(
           label: 'Ver',
           textColor: Colors.amber,
-          onPressed: widget.onVerCarrito,
+          onPressed: widget.onViewCart,
         ),
         duration: const Duration(seconds: 2),
       ),
@@ -98,11 +89,8 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
         foregroundColor: Colors.white,
         centerTitle: true,
       ),
-      body: StreamBuilder<QuerySnapshot>(
-        stream: FirebaseFirestore.instance
-            .collection(digizoneColeccion)
-            .orderBy('titulo')
-            .snapshots(),
+      body: StreamBuilder<List<ProductModel>>(
+        stream: _productService.watchProducts(),
         builder: (context, snapshot) {
           if (snapshot.hasError) {
             return Center(child: Text('Error: ${snapshot.error}'));
@@ -110,22 +98,18 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
           }
-          final docs = snapshot.data!.docs.where((doc) {
-            final data = doc.data() as Map<String, dynamic>;
-            return data['disponible'] != false;
-          }).toList();
-          if (docs.isEmpty) {
+          final products = snapshot.data!
+              .where((product) => product.disponible)
+              .toList();
+          if (products.isEmpty) {
             return const Center(child: Text('No hay productos disponibles'));
           }
           return ListView.builder(
             padding: const EdgeInsets.all(12),
-            itemCount: docs.length,
+            itemCount: products.length,
             itemBuilder: (context, index) {
-              final item = docs[index];
-              final data = item.data() as Map<String, dynamic>;
-              final inventario = ((data['inventario'] ?? 0) as num).toInt();
-              final sinStock = inventario <= 0;
-              final costo = ((data['costo'] ?? 0) as num).toDouble();
+              final product = products[index];
+              final sinStock = product.inventario <= 0;
 
               return Card(
                 margin: const EdgeInsets.only(bottom: 12),
@@ -137,7 +121,7 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
                         top: Radius.circular(4),
                       ),
                       child: imagenProducto(
-                        data['imagen']?.toString(),
+                        product.imagen,
                         height: 160,
                         width: double.infinity,
                       ),
@@ -148,17 +132,33 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
                         crossAxisAlignment: CrossAxisAlignment.start,
                         children: [
                           Text(
-                            (data['titulo'] ?? '').toString(),
+                            product.titulo,
                             style: const TextStyle(
                               fontSize: 18,
                               fontWeight: FontWeight.bold,
                             ),
                           ),
                           const SizedBox(height: 4),
-                          Text((data['detalle'] ?? '').toString()),
+                          Text(product.detalle),
+                          const SizedBox(height: 8),
+                          Wrap(
+                            spacing: 8,
+                            runSpacing: 6,
+                            children: [
+                              Chip(label: Text(product.categoria)),
+                              if (product.fabricante.isNotEmpty)
+                                Chip(label: Text(product.fabricante)),
+                              Chip(
+                                avatar: const Icon(Icons.star, size: 16),
+                                label: Text(
+                                  product.puntuacion.toStringAsFixed(1),
+                                ),
+                              ),
+                            ],
+                          ),
                           const SizedBox(height: 8),
                           Text(
-                            'S/. ${costo.toStringAsFixed(2)}',
+                            'S/. ${product.costo.toStringAsFixed(2)}',
                             style: const TextStyle(
                               fontSize: 16,
                               fontWeight: FontWeight.w600,
@@ -168,7 +168,7 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
                           Text(
                             sinStock
                                 ? 'Sin stock'
-                                : 'Stock disponible: $inventario',
+                                : 'Stock disponible: ${product.inventario}',
                             style: TextStyle(
                               color: sinStock ? Colors.red : Colors.green,
                               fontWeight: FontWeight.w500,
@@ -176,13 +176,12 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen>
                           ),
                           const SizedBox(height: 8),
                           ScaleTransition(
-                            scale: _botonScale,
+                            scale: _buttonScale,
                             child: SizedBox(
                               width: double.infinity,
                               child: ElevatedButton.icon(
-                                onPressed: sinStock
-                                    ? null
-                                    : () => _agregarAlCarrito(item.id, data),
+                                onPressed:
+                                    sinStock ? null : () => _addToCart(product),
                                 icon: const Icon(Icons.add_shopping_cart),
                                 label: const Text('Agregar al carrito'),
                               ),
