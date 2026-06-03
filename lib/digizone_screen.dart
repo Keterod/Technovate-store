@@ -3,6 +3,7 @@ import 'carrito_screen.dart';
 import 'carrito_state.dart';
 import 'digizone_admin_screen.dart';
 import 'digizone_tienda_screen.dart';
+import 'ubicacion_screen.dart';
 
 class DigizoneScreen extends StatefulWidget {
   const DigizoneScreen({super.key});
@@ -78,9 +79,11 @@ class _DigizoneScreenState extends State<DigizoneScreen>
             onVerCarrito: () => setState(() => _selectedIndex = 2),
           ),
           CarritoScreen(carritoState: carritoState),
+          const UbicacionScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
+        type: BottomNavigationBarType.fixed,
         currentIndex: _selectedIndex,
         onTap: (index) {
           setState(() {
@@ -101,6 +104,10 @@ class _DigizoneScreenState extends State<DigizoneScreen>
           BottomNavigationBarItem(
             icon: _iconoCarrito(),
             label: 'Carrito',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.location_on),
+            label: 'Ubicación',
           ),
         ],
       ),
