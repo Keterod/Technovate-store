@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'ai_assistant_screen.dart';
 import 'carrito_screen.dart';
 import 'carrito_state.dart';
 import 'digizone_admin_screen.dart';
@@ -80,6 +81,7 @@ class _DigizoneScreenState extends State<DigizoneScreen>
           ),
           CarritoScreen(carritoState: carritoState),
           const UbicacionScreen(),
+          const AiAssistantScreen(),
         ],
       ),
       bottomNavigationBar: BottomNavigationBar(
@@ -101,13 +103,14 @@ class _DigizoneScreenState extends State<DigizoneScreen>
             icon: Icon(Icons.store),
             label: 'Tienda',
           ),
-          BottomNavigationBarItem(
-            icon: _iconoCarrito(),
-            label: 'Carrito',
-          ),
+          BottomNavigationBarItem(icon: _iconoCarrito(), label: 'Carrito'),
           const BottomNavigationBarItem(
             icon: Icon(Icons.location_on),
             label: 'Ubicación',
+          ),
+          const BottomNavigationBarItem(
+            icon: Icon(Icons.auto_awesome),
+            label: 'Asistente',
           ),
         ],
       ),
