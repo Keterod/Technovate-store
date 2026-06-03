@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'carrito_state.dart';
 import 'digizone_utils.dart';
@@ -48,14 +49,25 @@ class _CarritoScreenState extends State<CarritoScreen> {
       return;
     }
 
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Debes iniciar sesión para comprar')),
+      );
+      return;
+    }
+
     setState(() => _procesando = true);
 
     try {
-      for (final item in List.of(_carrito.items)) {
-        final doc = await FirebaseFirestore.instance
+      final items = List.of(_carrito.items);
+      final batch = FirebaseFirestore.instance.batch();
+
+      for (final item in items) {
+        final docRef = FirebaseFirestore.instance
             .collection(digizoneColeccion)
-            .doc(item.idProducto)
-            .get();
+            .doc(item.idProducto);
+        final doc = await docRef.get();
 
         if (!doc.exists) {
           throw Exception('El producto "${item.titulo}" ya no existe');
@@ -69,12 +81,39 @@ class _CarritoScreenState extends State<CarritoScreen> {
           );
         }
 
-        await doc.reference.update({
-          'inventario': stock - item.cantidad,
-          if (stock - item.cantidad == 0) 'disponible': false,
+        final nuevoStock = stock - item.cantidad;
+        batch.update(docRef, {
+          'inventario': nuevoStock,
+          if (nuevoStock == 0) 'disponible': false,
         });
       }
 
+      final pedidoRef = FirebaseFirestore.instance
+          .collection('Usuarios')
+          .doc(user.uid)
+          .collection('Pedidos')
+          .doc();
+
+      batch.set(pedidoRef, {
+        'fecha': FieldValue.serverTimestamp(),
+        'total': _carrito.totalPrecio,
+        'estado': 'Completado',
+        'productos': items
+            .map(
+              (item) => {
+                'idProducto': item.idProducto,
+                'titulo': item.titulo,
+                'detalle': item.detalle,
+                'precio': item.costo,
+                'cantidad': item.cantidad,
+                'subtotal': item.subtotal,
+                'imagen': item.imagen,
+              },
+            )
+            .toList(),
+      });
+
+      await batch.commit();
       _carrito.limpiar();
 
       if (!mounted) return;
@@ -94,6 +133,7 @@ class _CarritoScreenState extends State<CarritoScreen> {
   @override
   Widget build(BuildContext context) {
     final items = _carrito.items;
+    final user = FirebaseAuth.instance.currentUser;
 
     return Scaffold(
       appBar: AppBar(
@@ -111,6 +151,17 @@ class _CarritoScreenState extends State<CarritoScreen> {
             )
           : Column(
               children: [
+                if (user == null)
+                  Container(
+                    width: double.infinity,
+                    padding: const EdgeInsets.all(12),
+                    color: Colors.orange.shade100,
+                    child: const Text(
+                      'Inicia sesión para finalizar tu compra',
+                      textAlign: TextAlign.center,
+                      style: TextStyle(fontWeight: FontWeight.w500),
+                    ),
+                  ),
                 Expanded(
                   child: ListView.builder(
                     padding: const EdgeInsets.all(12),

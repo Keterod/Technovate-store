@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_core/firebase_core.dart';
-import 'digizone_screen.dart';
+import 'auth_gate.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -17,7 +17,7 @@ class MainApp extends StatelessWidget {
       debugShowCheckedModeBanner: false,
       title: 'TECHNOVATE',
       theme: ThemeData(primarySwatch: Colors.indigo),
-      home: const DigizoneScreen(),
+      home: const AuthGate(),
     );
   }
 }

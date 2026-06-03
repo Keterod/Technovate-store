@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import 'digizone_utils.dart';
 
@@ -208,8 +209,50 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
     );
   }
 
+  bool _esAdmin() {
+    final user = FirebaseAuth.instance.currentUser;
+    return user?.email?.toLowerCase() == 'admin@gmail.com';
+  }
+
   @override
   Widget build(BuildContext context) {
+    if (!_esAdmin()) {
+      return Scaffold(
+        appBar: AppBar(
+          title: tituloTechnovate(subtitulo: 'Admin'),
+          backgroundColor: Colors.blue,
+          foregroundColor: Colors.white,
+          centerTitle: true,
+        ),
+        body: const Center(
+          child: Padding(
+            padding: EdgeInsets.all(24),
+            child: Column(
+              mainAxisAlignment: MainAxisAlignment.center,
+              children: [
+                Icon(Icons.lock, size: 64, color: Colors.red),
+                SizedBox(height: 16),
+                Text(
+                  'Acceso restringido',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                  ),
+                  textAlign: TextAlign.center,
+                ),
+                SizedBox(height: 12),
+                Text(
+                  'Solo el administrador puede gestionar productos.',
+                  style: TextStyle(fontSize: 16),
+                  textAlign: TextAlign.center,
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+    }
+
     return Scaffold(
       appBar: AppBar(
         title: tituloTechnovate(subtitulo: 'Admin'),

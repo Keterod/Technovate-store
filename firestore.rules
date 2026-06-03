@@ -1,0 +1,35 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    function isSignedIn() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isSignedIn()
+             && request.auth.token.email == "admin@gmail.com";
+    }
+
+    match /digizone_productos/{productoId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /configuracion/{docId} {
+      allow read: if true;
+      allow create, update, delete: if isAdmin();
+    }
+
+    match /Usuarios/{userId} {
+      allow read, write: if isSignedIn()
+                         && request.auth.uid == userId;
+
+      match /Pedidos/{pedidoId} {
+        allow read, write: if isSignedIn()
+                           && request.auth.uid == userId;
+      }
+    }
+  }
+}
