@@ -349,7 +349,7 @@ class _MessageBubble extends StatelessWidget {
             ),
             boxShadow: [
               BoxShadow(
-                color: Colors.indigo.withOpacity(0.15),
+                color: Colors.indigo.withValues(alpha: 0.15),
                 blurRadius: 6,
                 offset: const Offset(1, 3),
               )
@@ -365,7 +365,7 @@ class _MessageBubble extends StatelessWidget {
             border: Border.all(color: Colors.grey.shade200),
             boxShadow: [
               BoxShadow(
-                color: Colors.black.withOpacity(0.02),
+                color: Colors.black.withValues(alpha: 0.02),
                 blurRadius: 4,
                 offset: const Offset(0, 2),
               )
@@ -437,7 +437,7 @@ class _RecommendationList extends StatelessWidget {
               border: Border.all(color: Colors.deepPurple.shade100, width: 1.5),
               boxShadow: [
                 BoxShadow(
-                  color: Colors.deepPurple.shade900.withOpacity(0.05),
+                  color: Colors.deepPurple.shade900.withValues(alpha: 0.05),
                   blurRadius: 8,
                   offset: const Offset(0, 3),
                 )
@@ -625,14 +625,14 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
   final TextEditingController _budgetController = TextEditingController(text: '3000');
   String _selectedUse = 'Gaming';
   String _selectedBrand = 'Cualquiera';
-  String _selectedForm = 'Computadora de Escritorio (Desktop)';
+  String _selectedForm = 'Desktop (Escritorio)';
   String _selectedPriority = 'Rendimiento';
 
   final List<String> _uses = ['Gaming', 'Oficina/Estudio', 'Diseño Gráfico', 'Programación'];
   final List<String> _brands = ['Cualquiera', 'ASUS', 'Intel', 'AMD', 'NVIDIA', 'MSI', 'Gigabyte'];
   final List<String> _formats = [
-    'Computadora de Escritorio (Desktop)',
-    'Computadora Portátil (Laptop)'
+    'Desktop (Escritorio)',
+    'Laptop (Portátil)'
   ];
   final List<String> _priorities = ['Rendimiento', 'Precio / Calidad', 'Garantía / Marca'];
 
@@ -688,7 +688,8 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _selectedUse,
+              initialValue: _selectedUse,
+              isExpanded: true,
               items: _uses.map((u) => DropdownMenuItem(value: u, child: Text(u))).toList(),
               onChanged: (val) => setState(() => _selectedUse = val!),
               decoration: const InputDecoration(
@@ -699,7 +700,8 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _selectedBrand,
+              initialValue: _selectedBrand,
+              isExpanded: true,
               items: _brands.map((b) => DropdownMenuItem(value: b, child: Text(b))).toList(),
               onChanged: (val) => setState(() => _selectedBrand = val!),
               decoration: const InputDecoration(
@@ -710,8 +712,9 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _selectedForm,
-              items: _formats.map((f) => DropdownMenuItem(value: f, child: Text(f))).toList(),
+              initialValue: _selectedForm,
+              isExpanded: true,
+              items: _formats.map((f) => DropdownMenuItem(value: f, child: Text(f, overflow: TextOverflow.ellipsis))).toList(),
               onChanged: (val) => setState(() => _selectedForm = val!),
               decoration: const InputDecoration(
                 labelText: 'Formato',
@@ -721,7 +724,8 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
             ),
             const SizedBox(height: 14),
             DropdownButtonFormField<String>(
-              value: _selectedPriority,
+              initialValue: _selectedPriority,
+              isExpanded: true,
               items: _priorities.map((p) => DropdownMenuItem(value: p, child: Text(p))).toList(),
               onChanged: (val) => setState(() => _selectedPriority = val!),
               decoration: const InputDecoration(

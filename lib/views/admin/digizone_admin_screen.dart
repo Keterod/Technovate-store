@@ -298,7 +298,7 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                         const SizedBox(width: 10),
                         Expanded(
                           child: DropdownButtonFormField<String>(
-                            value: _categoriaSeleccionada,
+                            initialValue: _categoriaSeleccionada,
                             items: _categorias
                                 .map((c) => DropdownMenuItem(value: c, child: Text(c)))
                                 .toList(),
