@@ -456,7 +456,7 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen> {
                         ),
                         title: Text((data['titulo'] ?? '').toString()),
                         subtitle: Text(
-                          'Costo: S/. ${data['costo'] ?? 0} | Stock: $inventario'
+                          'Costo: ${formatoPrecio(data['costo'])} | Stock: $inventario'
                           '${stockCritico ? ' (crítico)' : ''}\n'
                           'Garantía: ${_garantiaDesdeData(data)}',
                         ),

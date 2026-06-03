@@ -2,6 +2,7 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
+import 'core/widgets/shimmer_loading.dart';
 import 'digizone_utils.dart';
 
 class HistorialPedidosScreen extends StatelessWidget {
@@ -54,7 +55,14 @@ class HistorialPedidosScreen extends StatelessWidget {
                   return Center(child: Text('Error: ${snapshot.error}'));
                 }
                 if (!snapshot.hasData) {
-                  return const Center(child: CircularProgressIndicator());
+                  return ListView.builder(
+                    padding: const EdgeInsets.all(12),
+                    itemCount: 4,
+                    itemBuilder: (_, _) => const Padding(
+                      padding: EdgeInsets.only(bottom: 12),
+                      child: ShimmerOrderCard(),
+                    ),
+                  );
                 }
 
                 final docs = snapshot.data!.docs;
@@ -83,7 +91,7 @@ class HistorialPedidosScreen extends StatelessWidget {
                       margin: const EdgeInsets.only(bottom: 12),
                       child: ExpansionTile(
                         title: Text(
-                          'S/. ${total.toStringAsFixed(2)}',
+                          formatoPrecio(total),
                           style: const TextStyle(
                             fontWeight: FontWeight.bold,
                             color: Colors.indigo,
@@ -111,7 +119,7 @@ class HistorialPedidosScreen extends StatelessWidget {
                             title: Text(titulo),
                             subtitle: Text(
                               'Cantidad: $cantidad · '
-                              'Subtotal: S/. ${subtotal.toStringAsFixed(2)}',
+                              'Subtotal: ${formatoPrecio(subtotal)}',
                             ),
                           );
                         }).toList(),
