@@ -5,6 +5,7 @@ import '../../viewmodels/cart_view_model.dart';
 import '../admin/digizone_admin_screen.dart';
 import '../assistant/ai_assistant_screen.dart';
 import '../cart/cart_screen.dart';
+import '../location/ubicacion_screen.dart';
 import '../store/digizone_tienda_screen.dart';
 import 'home_landing_screen.dart';
 
@@ -41,6 +42,7 @@ class _DigizoneScreenState extends State<DigizoneScreen>
           cartViewModel: cartViewModel,
           onProductAdded: _onProductAdded,
         ),
+        const UbicacionScreen(),
       ];
     }
     return [
@@ -64,6 +66,7 @@ class _DigizoneScreenState extends State<DigizoneScreen>
         cartViewModel: cartViewModel,
         onProductAdded: _onProductAdded,
       ),
+      const UbicacionScreen(),
     ];
   }
 
@@ -83,6 +86,10 @@ class _DigizoneScreenState extends State<DigizoneScreen>
           icon: Icon(Icons.auto_awesome),
           label: 'Asistente',
         ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.location_on),
+          label: 'Ubicación',
+        ),
       ];
     }
     return [
@@ -98,6 +105,10 @@ class _DigizoneScreenState extends State<DigizoneScreen>
       const BottomNavigationBarItem(
         icon: Icon(Icons.auto_awesome),
         label: 'Asistente',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.location_on),
+        label: 'Ubicación',
       ),
     ];
   }

@@ -1,16 +1,23 @@
 import 'package:flutter/foundation.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import '../services/location_service.dart';
+import '../services/profile_service.dart';
 
 class LocationViewModel extends ChangeNotifier {
-  LocationViewModel({LocationService? locationService})
-      : _locationService = locationService ?? LocationService();
+  LocationViewModel({
+    LocationService? locationService,
+    ProfileService? profileService,
+  })  : _locationService = locationService ?? LocationService(),
+        _profileService = profileService ?? ProfileService();
 
   final LocationService _locationService;
+  final ProfileService _profileService;
 
   LatLng? _ubicacionUsuario;
   LatLng? _ubicacionTienda;
   String _nombreTienda = 'TECHNOVATE Sancarlos';
+  String _direccionTienda = '';
+  String _direccionUsuario = '';
   String _distancia = '';
   String _duracion = '';
   bool _cargando = true;
@@ -19,6 +26,8 @@ class LocationViewModel extends ChangeNotifier {
   LatLng? get ubicacionUsuario => _ubicacionUsuario;
   LatLng? get ubicacionTienda => _ubicacionTienda;
   String get nombreTienda => _nombreTienda;
+  String get direccionTienda => _direccionTienda;
+  String get direccionUsuario => _direccionUsuario;
   String get distancia => _distancia;
   String get duracion => _duracion;
   bool get cargando => _cargando;
@@ -42,15 +51,25 @@ class LocationViewModel extends ChangeNotifier {
     notifyListeners();
 
     try {
-      // 1. Obtener ubicación de la tienda
-      final tiendaInfo = await _locationService.obtenerUbicacionTienda();
+      final results = await Future.wait([
+        _locationService.obtenerUbicacionTienda(),
+        _locationService.obtenerUbicacionUsuario(),
+        _profileService.getProfile(),
+      ]);
+
+      final tiendaInfo = results[0] as Map<String, dynamic>;
       _nombreTienda = tiendaInfo['nombre'] as String;
+      _direccionTienda = tiendaInfo['direccion'] as String;
       _ubicacionTienda = tiendaInfo['posicion'] as LatLng;
 
-      // 2. Obtener ubicación del usuario
-      _ubicacionUsuario = await _locationService.obtenerUbicacionUsuario();
+      _ubicacionUsuario = results[1] as LatLng;
 
-      // 3. Obtener ruta si ambos están listos
+      final perfil = results[2] as UserProfile;
+      if (perfil.direccion.isNotEmpty) {
+        _direccionUsuario =
+            '${perfil.direccion}${perfil.ciudad.isNotEmpty ? ', ${perfil.ciudad}' : ''}';
+      }
+
       if (_ubicacionUsuario != null && _ubicacionTienda != null) {
         final ruta = await _locationService.obtenerDistanciaYDuracion(
           _ubicacionUsuario!,

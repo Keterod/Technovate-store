@@ -59,6 +59,7 @@ class LocationService {
 
     return {
       'nombre': (data['nombre'] ?? 'TECHNOVATE Sancarlos').toString(),
+      'direccion': (data['direccion'] ?? '').toString(),
       'posicion': LatLng(geo.latitude, geo.longitude),
     };
   }
