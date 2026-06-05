@@ -1,4 +1,5 @@
 import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 
 class NotificationService {
@@ -12,6 +13,8 @@ class NotificationService {
   String? _token;
 
   Future<void> initialize() async {
+    if (kIsWeb) return;
+
     final settings = await _messaging.requestPermission(
       alert: true,
       badge: true,

@@ -4,6 +4,8 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
+import '../core/constants/app_constants.dart';
+
 class LocationService {
   LocationService({
     FirebaseFirestore? firestore,
@@ -13,7 +15,7 @@ class LocationService {
 
   final FirebaseFirestore _firestore;
   final http.Client _client;
-  static const String _googleMapsApiKey = 'AIzaSyBIZrptkE0IGakPhzMzMpq4PaW_gw_D1vk';
+  static const String _googleMapsApiKey = googleMapsApiKey;
 
   Future<LatLng> obtenerUbicacionUsuario() async {
     final serviceEnabled = await Geolocator.isLocationServiceEnabled();

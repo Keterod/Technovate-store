@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/technovate_theme.dart';
+import 'firebase_options.dart';
 import 'login_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/notification_service.dart';
@@ -11,18 +12,28 @@ import 'views/home/digizone_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
-  await FirebaseAppCheck.instance.activate(
-    providerAndroid: kDebugMode
-        ? const AndroidDebugProvider()
-        : const AndroidPlayIntegrityProvider(),
-  );
+  if (kIsWeb) {
+    await Firebase.initializeApp(options: DefaultFirebaseOptions.web);
+  } else {
+    await Firebase.initializeApp();
+  }
+
+  if (!kIsWeb) {
+    await FirebaseAppCheck.instance.activate(
+      providerAndroid: kDebugMode
+          ? const AndroidDebugProvider()
+          : const AndroidPlayIntegrityProvider(),
+    );
+  }
+
   await AnalyticsService().initialize();
 
-  try {
-    await NotificationService().initialize();
-  } catch (e) {
-    debugPrint('FCM init error (non-fatal): $e');
+  if (!kIsWeb) {
+    try {
+      await NotificationService().initialize();
+    } catch (e) {
+      debugPrint('FCM init error (non-fatal): $e');
+    }
   }
   runApp(const MainApp());
 }
@@ -57,6 +68,15 @@ class _MainAppState extends State<MainApp> {
       theme: TechnovateTheme.light(),
       darkTheme: TechnovateTheme.dark(),
       themeMode: _darkMode ? ThemeMode.dark : ThemeMode.light,
+      builder: (context, child) {
+        if (!kIsWeb || child == null) return child ?? const SizedBox.shrink();
+        return Center(
+          child: ConstrainedBox(
+            constraints: const BoxConstraints(maxWidth: 480),
+            child: child,
+          ),
+        );
+      },
       home: DarkModeScope(
         darkMode: _darkMode,
         onToggle: _toggleDarkMode,

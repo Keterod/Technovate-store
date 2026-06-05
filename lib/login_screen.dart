@@ -1,8 +1,10 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_utils.dart';
+import 'core/constants/app_constants.dart';
 import 'registro_screen.dart';
 
 class LoginScreen extends StatefulWidget {
@@ -61,7 +63,10 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loginConGoogle() async {
     setState(() => _cargandoGoogle = true);
     try {
-      final googleUser = await GoogleSignIn().signIn();
+      final googleSignIn = kIsWeb
+          ? GoogleSignIn(clientId: googleWebClientId)
+          : GoogleSignIn();
+      final googleUser = await googleSignIn.signIn();
       if (googleUser == null) { if (mounted) setState(() => _cargandoGoogle = false); return; }
       final googleAuth = await googleUser.authentication;
       final credential = GoogleAuthProvider.credential(

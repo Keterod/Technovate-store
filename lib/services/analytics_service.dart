@@ -14,14 +14,16 @@ class AnalyticsService {
   FirebaseCrashlytics get crashlytics => _crashlytics;
 
   Future<void> initialize() async {
-    FlutterError.onError = (details) {
-      _crashlytics.recordFlutterFatalError(details);
-    };
-    PlatformDispatcher.instance.onError = (error, stack) {
-      _crashlytics.recordError(error, stack, fatal: true);
-      return true;
-    };
-    await _crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+    if (!kIsWeb) {
+      FlutterError.onError = (details) {
+        _crashlytics.recordFlutterFatalError(details);
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        _crashlytics.recordError(error, stack, fatal: true);
+        return true;
+      };
+      await _crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+    }
   }
 
   Future<void> logProductView({
@@ -93,7 +95,7 @@ class AnalyticsService {
 
   Future<void> setUserId(String? uid) async {
     await _analytics.setUserId(id: uid);
-    if (uid != null) {
+    if (!kIsWeb && uid != null) {
       await _crashlytics.setUserIdentifier(uid);
     }
   }
