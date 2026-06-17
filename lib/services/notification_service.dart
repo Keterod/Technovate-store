@@ -10,31 +10,41 @@ class NotificationService {
 
   String? get fcmToken => _token;
   String? _token;
+  static const Duration _timeout = Duration(seconds: 5);
 
   Future<void> initialize() async {
-    final settings = await _messaging.requestPermission(
-      alert: true,
-      badge: true,
-      sound: true,
-      provisional: false,
-    );
+    try {
+      debugPrint('DEBUG FCM: init start');
+      final settings = await _messaging
+          .requestPermission(
+            alert: true,
+            badge: true,
+            sound: true,
+            provisional: false,
+          )
+          .timeout(_timeout);
 
-    if (settings.authorizationStatus == AuthorizationStatus.denied) return;
+      if (settings.authorizationStatus == AuthorizationStatus.denied) return;
 
-    _token = await _messaging.getToken();
+      _token = await _messaging.getToken().timeout(_timeout);
 
-    _messaging.onTokenRefresh.listen((newToken) {
-      _token = newToken;
+      _messaging.onTokenRefresh.listen((newToken) {
+        _token = newToken;
+      });
 
-    });
+      FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
 
-    FirebaseMessaging.onMessage.listen(_handleForegroundMessage);
+      FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
 
-    FirebaseMessaging.onMessageOpenedApp.listen(_handleNotificationTap);
-
-    final initialMessage = await _messaging.getInitialMessage();
-    if (initialMessage != null) {
-      _handleNotificationTap(initialMessage);
+      final initialMessage = await _messaging.getInitialMessage().timeout(
+        _timeout,
+      );
+      if (initialMessage != null) {
+        _handleNotificationTap(initialMessage);
+      }
+      debugPrint('DEBUG FCM: init done');
+    } catch (e) {
+      debugPrint('DEBUG FCM: init error=$e');
     }
   }
 

@@ -6,6 +6,7 @@ import 'package:flutter/material.dart';
 import 'package:http/http.dart' as http;
 
 import 'auth_utils.dart';
+import 'core/session/session_manager.dart';
 
 const String dniToken =
     'eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJlbWFpbCI6ImpmY2M5NTAxMjMwOUBnbWFpbC5jb20ifQ.UaK6eecpbt-mVnF9hI-BYSHtl6QQ5hCLU1MNItWe9P8';
@@ -42,13 +43,13 @@ class _RegistroScreenState extends State<RegistroScreen> {
   String _mensajeAuth(FirebaseAuthException e) {
     switch (e.code) {
       case 'email-already-in-use':
-        return 'Ese correo ya está registrado';
+        return 'Este correo ya está registrado.';
       case 'invalid-email':
-        return 'Correo electrónico inválido';
+        return 'Correo electrónico inválido.';
       case 'weak-password':
-        return 'La contraseña es muy débil';
+        return 'La contraseña es muy débil.';
       default:
-        return e.message ?? 'Error al crear la cuenta';
+        return 'No se pudo crear la cuenta. Intenta nuevamente.';
     }
   }
 
@@ -89,21 +90,19 @@ class _RegistroScreenState extends State<RegistroScreen> {
         throw Exception('Respuesta de DNI no válida');
       }
 
-      final nombres = (data['nombres'] ??
-              data['nombre'] ??
-              data['nombresCompletos'] ??
-              '')
-          .toString();
-      final apellidoPaterno = (data['apellidoPaterno'] ??
-              data['apellido_paterno'] ??
-              '')
-          .toString();
-      final apellidoMaterno = (data['apellidoMaterno'] ??
-              data['apellido_materno'] ??
-              '')
-          .toString();
+      final nombres =
+          (data['nombres'] ?? data['nombre'] ?? data['nombresCompletos'] ?? '')
+              .toString();
+      final apellidoPaterno =
+          (data['apellidoPaterno'] ?? data['apellido_paterno'] ?? '')
+              .toString();
+      final apellidoMaterno =
+          (data['apellidoMaterno'] ?? data['apellido_materno'] ?? '')
+              .toString();
 
-      if (nombres.isEmpty && apellidoPaterno.isEmpty && apellidoMaterno.isEmpty) {
+      if (nombres.isEmpty &&
+          apellidoPaterno.isEmpty &&
+          apellidoMaterno.isEmpty) {
         throw Exception('No se encontraron datos para ese DNI');
       }
 
@@ -119,9 +118,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
       );
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al consultar DNI: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error al consultar DNI: $e')));
     } finally {
       if (mounted) setState(() => _consultandoDni = false);
     }
@@ -145,12 +144,54 @@ class _RegistroScreenState extends State<RegistroScreen> {
     });
   }
 
-  Future<void> _finalizarRegistroExitoso() async {
+  String _mensajePerfilNoGuardado(Object error) {
+    if (error is FirebaseException && error.code == 'permission-denied') {
+      return 'Cuenta creada. No se pudo guardar el perfil por permisos de Firestore.';
+    }
+    return 'Cuenta creada. No se pudo guardar el perfil, podrás completarlo luego.';
+  }
+
+  Future<String?> _intentarGuardarPerfilUsuario({
+    required String uid,
+    required String dni,
+    required String nombres,
+    required String apellidoPaterno,
+    required String apellidoMaterno,
+    required String correo,
+  }) async {
+    debugPrint('DEBUG REGISTER: saving Firestore profile');
+    try {
+      await _guardarPerfilUsuario(
+        uid: uid,
+        dni: dni,
+        nombres: nombres,
+        apellidoPaterno: apellidoPaterno,
+        apellidoMaterno: apellidoMaterno,
+        correo: correo,
+      );
+      return null;
+    } on FirebaseException catch (e, stackTrace) {
+      debugPrint('DEBUG REGISTER: profile save failed code=${e.code} error=$e');
+      debugPrint('DEBUG REGISTER: profile save stack=$stackTrace');
+      return _mensajePerfilNoGuardado(e);
+    } catch (e, stackTrace) {
+      debugPrint('DEBUG REGISTER: profile save failed code=unknown error=$e');
+      debugPrint('DEBUG REGISTER: profile save stack=$stackTrace');
+      return _mensajePerfilNoGuardado(e);
+    }
+  }
+
+  Future<void> _finalizarRegistroExitoso(
+    String uid, {
+    String mensaje = 'Cuenta creada correctamente',
+  }) async {
     if (!mounted) return;
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text('Cuenta creada correctamente')),
-    );
-    Navigator.pop(context);
+    debugPrint('DEBUG SESSION: register success uid=$uid');
+    debugPrint('DEBUG REGISTER: navigating to authenticated root');
+    ScaffoldMessenger.of(
+      context,
+    ).showSnackBar(SnackBar(content: Text(mensaje)));
+    SessionManager.resetNavigationToRoot();
   }
 
   Future<void> _crearCuenta() async {
@@ -177,7 +218,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
 
     if (contrasena.length < 6) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('La contraseña debe tener al menos 6 caracteres')),
+        const SnackBar(
+          content: Text('La contraseña debe tener al menos 6 caracteres'),
+        ),
       );
       return;
     }
@@ -185,6 +228,7 @@ class _RegistroScreenState extends State<RegistroScreen> {
     setState(() => _cargando = true);
 
     try {
+      debugPrint('DEBUG REGISTER: creating auth user');
       final credential = await FirebaseAuth.instance
           .createUserWithEmailAndPassword(email: correo, password: contrasena);
 
@@ -192,8 +236,9 @@ class _RegistroScreenState extends State<RegistroScreen> {
       if (user == null) {
         throw Exception('No se pudo crear el usuario');
       }
+      debugPrint('DEBUG REGISTER: auth user created uid=${user.uid}');
 
-      await _guardarPerfilUsuario(
+      final perfilError = await _intentarGuardarPerfilUsuario(
         uid: user.uid,
         dni: dni,
         nombres: nombres,
@@ -202,42 +247,42 @@ class _RegistroScreenState extends State<RegistroScreen> {
         correo: correo,
       );
 
-      await _finalizarRegistroExitoso();
+      await _finalizarRegistroExitoso(
+        user.uid,
+        mensaje: perfilError ?? 'Cuenta creada correctamente',
+      );
     } on FirebaseAuthException catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(_mensajeAuth(e))),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(_mensajeAuth(e))));
     } catch (e) {
       if (!mounted) return;
       if (debeIgnorarErrorAuth(e)) {
         final user = FirebaseAuth.instance.currentUser;
         if (user != null) {
-          try {
-            await _guardarPerfilUsuario(
-              uid: user.uid,
-              dni: dni,
-              nombres: nombres,
-              apellidoPaterno: apellidoPaterno,
-              apellidoMaterno: apellidoMaterno,
-              correo: correo,
-            );
-            await _finalizarRegistroExitoso();
-          } catch (firestoreError) {
-            if (!mounted) return;
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(
-                content: Text(
-                  'Cuenta creada, pero error al guardar perfil: $firestoreError',
-                ),
-              ),
-            );
-          }
+          debugPrint('DEBUG REGISTER: auth user created uid=${user.uid}');
+          final perfilError = await _intentarGuardarPerfilUsuario(
+            uid: user.uid,
+            dni: dni,
+            nombres: nombres,
+            apellidoPaterno: apellidoPaterno,
+            apellidoMaterno: apellidoMaterno,
+            correo: correo,
+          );
+          await _finalizarRegistroExitoso(
+            user.uid,
+            mensaje: perfilError ?? 'Cuenta creada correctamente',
+          );
         }
         return;
       }
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
+        const SnackBar(
+          content: Text(
+            'No se pudo completar el registro. Intenta nuevamente.',
+          ),
+        ),
       );
     } finally {
       if (mounted) setState(() => _cargando = false);
@@ -248,12 +293,17 @@ class _RegistroScreenState extends State<RegistroScreen> {
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
-        title: Row(mainAxisSize: MainAxisSize.min, children: [
-          const Icon(Icons.memory, size: 22, color: Colors.white),
-          const SizedBox(width: 8),
-          Text('TECHNOVATE - Registro', style: const TextStyle(color: Colors.white)),
-        ]),
-
+        title: Row(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(Icons.memory, size: 22, color: Colors.white),
+            const SizedBox(width: 8),
+            Text(
+              'TECHNOVATE - Registro',
+              style: const TextStyle(color: Colors.white),
+            ),
+          ],
+        ),
       ),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),

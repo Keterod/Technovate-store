@@ -1,9 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../../views/admin/digizone_admin_screen.dart';
+import '../../core/session/session_manager.dart';
 
 class AdminLoginScreen extends StatefulWidget {
-  const AdminLoginScreen({Key? key}) : super(key: key);
+  const AdminLoginScreen({super.key});
 
   @override
   State<AdminLoginScreen> createState() => _AdminLoginScreenState();
@@ -27,16 +27,21 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
       );
       final user = credential.user;
       if (user == null) throw Exception('Usuario no encontrado');
-      if (!_adminEmails.contains(user.email)) {
-        throw Exception('El usuario no tiene permisos de administrador');
+      if (!_adminEmails.contains(user.email?.toLowerCase())) {
+        if (!mounted) return;
+        setState(() {
+          _errorMsg = 'El usuario no tiene permisos de administrador';
+        });
+        await SessionManager.logoutAndResetNavigation(
+          reason: 'admin_not_allowed',
+        );
+        return;
       }
-      // Navegar al panel admin
-      if (!mounted) return;
-      Navigator.of(context).pushReplacement(MaterialPageRoute(builder: (_) => const DigizoneAdminScreen()));
+      SessionManager.resetNavigationToRoot();
     } on FirebaseAuthException catch (e) {
-      setState(() => _errorMsg = e.message);
+      if (mounted) setState(() => _errorMsg = e.message);
     } catch (e) {
-      setState(() => _errorMsg = e.toString());
+      if (mounted) setState(() => _errorMsg = e.toString());
     } finally {
       if (mounted) setState(() => _loading = false);
     }
@@ -51,11 +56,8 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
-      appBar: AppBar(
-        title: const Text('Login Administrador'),
-      ),
+      appBar: AppBar(title: const Text('Login Administrador')),
       body: Padding(
         padding: const EdgeInsets.all(16.0),
         child: Column(
@@ -79,10 +81,7 @@ class _AdminLoginScreenState extends State<AdminLoginScreen> {
             ),
             const SizedBox(height: 20),
             if (_errorMsg != null)
-              Text(
-                _errorMsg!,
-                style: const TextStyle(color: Colors.red),
-              ),
+              Text(_errorMsg!, style: const TextStyle(color: Colors.red)),
             const SizedBox(height: 12),
             _loading
                 ? const CircularProgressIndicator()

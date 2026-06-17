@@ -1,6 +1,7 @@
+import 'dart:async';
+
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
-import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/widgets/technovate_widgets.dart';
 import '../../services/analytics_service.dart';
@@ -24,6 +25,22 @@ class CheckoutScreen extends StatefulWidget {
 
   @override
   State<CheckoutScreen> createState() => _CheckoutScreenState();
+}
+
+class _CheckoutFormData {
+  const _CheckoutFormData({
+    required this.nombre,
+    required this.direccion,
+    required this.ciudad,
+    required this.telefono,
+    required this.notas,
+  });
+
+  final String nombre;
+  final String direccion;
+  final String ciudad;
+  final String telefono;
+  final String notas;
 }
 
 class _CheckoutScreenState extends State<CheckoutScreen> {
@@ -71,9 +88,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _ciudadController.text = result['ciudad'] ?? '';
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _obteniendoUbicacion = false);
     }
@@ -109,48 +126,130 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   }
 
   Future<void> _confirmarPedido() async {
-    if (!_formKey.currentState!.validate()) return;
+    if (_procesando) return;
 
-    setState(() => _procesando = true);
-
-    AnalyticsService().logBeginCheckout(
-      value: widget.cartViewModel.totalPrecio,
-    );
-
+    final stopwatch = Stopwatch()..start();
+    debugPrint('DEBUG CHECKOUT: confirm pressed');
     try {
-      final order = await widget.orderViewModel.crearPedido(
-        cartItems: widget.cartViewModel.items,
-        direccion: {
-          'nombre': _nombreController.text.trim(),
-          'direccion': _direccionController.text.trim(),
-          'ciudad': _ciudadController.text.trim(),
-          'telefono': _telefonoController.text.trim(),
-          'notas': _notasController.text.trim(),
-        },
-        metodoPago: _metodoPago,
-        total: widget.cartViewModel.totalPrecio,
-      );
-
-      AnalyticsService().logPurchase(
-        value: widget.cartViewModel.totalPrecio,
-      );
-      widget.cartViewModel.limpiar();
-
-      if (!mounted) return;
-      Navigator.pushReplacement(
-        context,
-        MaterialPageRoute(
-          builder: (_) => OrderConfirmationScreen(order: order),
-        ),
-      );
-    } catch (e) {
+      await _confirmarPedidoInterno(
+        stopwatch,
+      ).timeout(const Duration(seconds: 15));
+    } on TimeoutException catch (e, stackTrace) {
+      debugPrint('DEBUG CHECKOUT: timeout error=$e');
+      debugPrint('DEBUG CHECKOUT: stack=$stackTrace');
       if (!mounted) return;
       ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error al procesar pedido: $e')),
+        const SnackBar(
+          content: Text('El pedido tardó demasiado. Intenta nuevamente.'),
+        ),
+      );
+    } on FirebaseException catch (e, stackTrace) {
+      debugPrint(
+        'DEBUG CHECKOUT: firebase error code=${e.code} message=${e.message}',
+      );
+      debugPrint('DEBUG CHECKOUT: stack=$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo confirmar el pedido. Intenta nuevamente.'),
+        ),
+      );
+    } catch (e, stackTrace) {
+      debugPrint('DEBUG CHECKOUT: error=$e');
+      debugPrint('DEBUG CHECKOUT: stack=$stackTrace');
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('No se pudo confirmar el pedido. Intenta nuevamente.'),
+        ),
       );
     } finally {
+      debugPrint('DEBUG CHECKOUT: total ms=${stopwatch.elapsedMilliseconds}');
+      stopwatch.stop();
       if (mounted) setState(() => _procesando = false);
     }
+  }
+
+  Future<void> _confirmarPedidoInterno(Stopwatch stopwatch) async {
+    debugPrint('DEBUG CHECKOUT: validate form start');
+    final validationError = _validarCamposRapido();
+    debugPrint(
+      'DEBUG CHECKOUT: validate form result=${validationError == null}',
+    );
+    if (validationError != null) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text(validationError)));
+      return;
+    }
+
+    if (mounted) setState(() => _procesando = true);
+
+    debugPrint('DEBUG CHECKOUT: read fields start');
+    final formData = _leerCamposFormulario();
+    debugPrint('DEBUG CHECKOUT: read fields done');
+
+    debugPrint('DEBUG CHECKOUT: validate cart start');
+    final cartItems = widget.cartViewModel.items;
+    if (cartItems.isEmpty) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('El carrito está vacío.')));
+      return;
+    }
+    debugPrint('DEBUG CHECKOUT: validate cart done items=${cartItems.length}');
+
+    debugPrint('DEBUG CHECKOUT: build order data start');
+    final direccion = {
+      'nombre': formData.nombre,
+      'direccion': formData.direccion,
+      'ciudad': formData.ciudad,
+      'telefono': formData.telefono,
+      'notas': formData.notas,
+    };
+    final total = widget.cartViewModel.totalPrecio;
+    debugPrint('DEBUG CHECKOUT: build order data done');
+
+    AnalyticsService().logBeginCheckout(value: total);
+
+    debugPrint('DEBUG CHECKOUT: before order service');
+    debugPrint('DEBUG CHECKOUT: start create order');
+    final order = await widget.orderViewModel.crearPedido(
+      cartItems: cartItems,
+      direccion: direccion,
+      metodoPago: _metodoPago,
+      total: total,
+    );
+    debugPrint('DEBUG CHECKOUT: order create done');
+
+    AnalyticsService().logPurchase(value: total);
+    widget.cartViewModel.limpiar();
+
+    if (!mounted) return;
+    Navigator.pushReplacement(
+      context,
+      MaterialPageRoute(builder: (_) => OrderConfirmationScreen(order: order)),
+    );
+  }
+
+  String? _validarCamposRapido() {
+    if (_nombreController.text.trim().isEmpty) return 'Ingresa tu nombre';
+    if (_direccionController.text.trim().isEmpty) return 'Ingresa tu dirección';
+    if (_ciudadController.text.trim().isEmpty) return 'Ingresa tu ciudad';
+    if (_telefonoController.text.trim().isEmpty) return 'Ingresa tu teléfono';
+    return null;
+  }
+
+  _CheckoutFormData _leerCamposFormulario() {
+    return _CheckoutFormData(
+      nombre: _nombreController.text.trim(),
+      direccion: _direccionController.text.trim(),
+      ciudad: _ciudadController.text.trim(),
+      telefono: _telefonoController.text.trim(),
+      notas: _notasController.text.trim(),
+    );
   }
 
   @override
@@ -159,9 +258,7 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
     final total = widget.cartViewModel.totalPrecio;
 
     return Scaffold(
-      appBar: AppBar(
-        title: tituloTechnovate(subtitulo: 'Checkout'),
-      ),
+      appBar: AppBar(title: tituloTechnovate(subtitulo: 'Checkout')),
       body: SingleChildScrollView(
         padding: const EdgeInsets.all(16),
         child: Form(
@@ -183,13 +280,14 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         ),
                       ),
                       const SizedBox(height: 8),
-                      ...items.map((item) => Padding(
-                            padding: const EdgeInsets.symmetric(vertical: 4),
-                            child: Row(
-                              children: [
-                                SizedBox(
-                                  width: 40,
-                                  height: 40,
+                      ...items.map(
+                        (item) => Padding(
+                          padding: const EdgeInsets.symmetric(vertical: 4),
+                          child: Row(
+                            children: [
+                              SizedBox(
+                                width: 40,
+                                height: 40,
                                 child: Hero(
                                   tag: 'cart_img_${item.idProducto}',
                                   child: imagenProducto(
@@ -198,23 +296,24 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                                     width: 40,
                                   ),
                                 ),
+                              ),
+                              const SizedBox(width: 10),
+                              Expanded(
+                                child: Text(
+                                  '${item.titulo} x${item.cantidad}',
+                                  style: const TextStyle(fontSize: 14),
                                 ),
-                                const SizedBox(width: 10),
-                                Expanded(
-                                  child: Text(
-                                    '${item.titulo} x${item.cantidad}',
-                                    style: const TextStyle(fontSize: 14),
-                                  ),
+                              ),
+                              Text(
+                                'S/. ${item.subtotal.toStringAsFixed(2)}',
+                                style: const TextStyle(
+                                  fontWeight: FontWeight.w500,
                                 ),
-                                Text(
-                                  'S/. ${item.subtotal.toStringAsFixed(2)}',
-                                  style: const TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                  ),
-                                ),
-                              ],
-                            ),
-                          )),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
                       const Divider(height: 16),
                       Row(
                         mainAxisAlignment: MainAxisAlignment.spaceBetween,
@@ -259,7 +358,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                       _cargarPerfil();
                     },
                     icon: const Icon(Icons.edit, size: 16),
-                    label: const Text('Editar perfil', style: TextStyle(fontSize: 13)),
+                    label: const Text(
+                      'Editar perfil',
+                      style: TextStyle(fontSize: 13),
+                    ),
                   ),
                 ],
               ),
@@ -268,7 +370,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 spacing: 8,
                 children: [
                   OutlinedButton.icon(
-                    onPressed: _obteniendoUbicacion ? null : _usarUbicacionActual,
+                    onPressed: _obteniendoUbicacion
+                        ? null
+                        : _usarUbicacionActual,
                     icon: _obteniendoUbicacion
                         ? const SizedBox(
                             width: 18,
@@ -310,8 +414,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                   prefixIcon: Icon(Icons.home),
                   border: OutlineInputBorder(),
                 ),
-                validator: (v) =>
-                    v == null || v.trim().isEmpty ? 'Ingresa tu dirección' : null,
+                validator: (v) => v == null || v.trim().isEmpty
+                    ? 'Ingresa tu dirección'
+                    : null,
               ),
               const SizedBox(height: 12),
               Row(
@@ -339,8 +444,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         prefixIcon: Icon(Icons.phone),
                         border: OutlineInputBorder(),
                       ),
-                      validator: (v) =>
-                          v == null || v.trim().isEmpty ? 'Ingresa tu teléfono' : null,
+                      validator: (v) => v == null || v.trim().isEmpty
+                          ? 'Ingresa tu teléfono'
+                          : null,
                     ),
                   ),
                 ],
@@ -387,7 +493,9 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                         )
                       : const Icon(Icons.check_circle),
                   label: Text(
-                    _procesando ? 'Procesando...' : 'Confirmar pedido - S/. ${total.toStringAsFixed(2)}',
+                    _procesando
+                        ? 'Procesando...'
+                        : 'Confirmar pedido - S/. ${total.toStringAsFixed(2)}',
                   ),
                   style: ElevatedButton.styleFrom(
                     textStyle: const TextStyle(

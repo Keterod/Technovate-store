@@ -17,25 +17,27 @@ class SucursalInfo {
 }
 
 class LocationService {
-  LocationService({
-    FirebaseFirestore? firestore,
-    http.Client? httpClient,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _client = httpClient ?? http.Client();
+  LocationService({FirebaseFirestore? firestore, http.Client? httpClient})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _client = httpClient ?? http.Client();
 
   final FirebaseFirestore _firestore;
   final http.Client _client;
-  static const String _googleMapsApiKey = 'AIzaSyBIZrptkE0IGakPhzMzMpq4PaW_gw_D1vk';
+  static const String _googleMapsApiKey =
+      'AIzaSyBIZrptkE0IGakPhzMzMpq4PaW_gw_D1vk';
+  static const Duration _timeout = Duration(seconds: 10);
 
   Future<LatLng> obtenerUbicacionUsuario() async {
-    final serviceEnabled = await Geolocator.isLocationServiceEnabled();
+    final serviceEnabled = await Geolocator.isLocationServiceEnabled().timeout(
+      _timeout,
+    );
     if (!serviceEnabled) {
       throw Exception('El servicio de ubicación está desactivado');
     }
 
-    var permission = await Geolocator.checkPermission();
+    var permission = await Geolocator.checkPermission().timeout(_timeout);
     if (permission == LocationPermission.denied) {
-      permission = await Geolocator.requestPermission();
+      permission = await Geolocator.requestPermission().timeout(_timeout);
       if (permission == LocationPermission.denied) {
         throw Exception('Permiso de ubicación denegado');
       }
@@ -48,16 +50,18 @@ class LocationService {
     }
 
     final position = await Geolocator.getCurrentPosition(
-      locationSettings: const LocationSettings(
-        accuracy: LocationAccuracy.high,
-      ),
-    );
+      locationSettings: const LocationSettings(accuracy: LocationAccuracy.high),
+    ).timeout(_timeout);
 
     return LatLng(position.latitude, position.longitude);
   }
 
   Future<Map<String, dynamic>> obtenerUbicacionTienda() async {
-    final doc = await _firestore.collection('configuracion').doc('tienda').get();
+    final doc = await _firestore
+        .collection('configuracion')
+        .doc('tienda')
+        .get()
+        .timeout(_timeout);
 
     if (!doc.exists) {
       throw Exception('No se encontró la configuración de la tienda');
@@ -76,17 +80,22 @@ class LocationService {
   }
 
   Future<List<SucursalInfo>> obtenerSucursales() async {
-    final snap = await _firestore.collection('sucursales').get();
+    final snap = await _firestore
+        .collection('sucursales')
+        .get()
+        .timeout(_timeout);
     final list = <SucursalInfo>[];
     for (final doc in snap.docs) {
       final data = doc.data();
       final geo = data['ubicacion'] as GeoPoint?;
       if (geo == null) continue;
-      list.add(SucursalInfo(
-        nombre: (data['nombre'] ?? '').toString(),
-        direccion: (data['direccion'] ?? '').toString(),
-        posicion: LatLng(geo.latitude, geo.longitude),
-      ));
+      list.add(
+        SucursalInfo(
+          nombre: (data['nombre'] ?? '').toString(),
+          direccion: (data['direccion'] ?? '').toString(),
+          posicion: LatLng(geo.latitude, geo.longitude),
+        ),
+      );
     }
     return list;
   }
@@ -103,9 +112,11 @@ class LocationService {
       '&mode=driving',
     );
 
-    final response = await _client.get(url);
+    final response = await _client.get(url).timeout(_timeout);
     if (response.statusCode != 200) {
-      throw Exception('Error al consultar Directions API (${response.statusCode})');
+      throw Exception(
+        'Error al consultar Directions API (${response.statusCode})',
+      );
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
@@ -138,9 +149,11 @@ class LocationService {
       '&key=$_googleMapsApiKey'
       '&language=es',
     );
-    final response = await _client.get(url);
+    final response = await _client.get(url).timeout(_timeout);
     if (response.statusCode != 200) {
-      throw Exception('Error al consultar Geocoding API (${response.statusCode})');
+      throw Exception(
+        'Error al consultar Geocoding API (${response.statusCode})',
+      );
     }
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final status = data['status']?.toString() ?? '';
@@ -160,7 +173,11 @@ class LocationService {
     if (components != null) {
       for (final c in components) {
         final comp = c as Map<String, dynamic>;
-        final types = (comp['types'] as List<dynamic>?)?.map((e) => e.toString()).toSet() ?? {};
+        final types =
+            (comp['types'] as List<dynamic>?)
+                ?.map((e) => e.toString())
+                .toSet() ??
+            {};
         if (types.contains('locality') && city.isEmpty) {
           city = (comp['long_name'] ?? '').toString();
         }
@@ -170,9 +187,6 @@ class LocationService {
       }
     }
 
-    return {
-      'direccion': formattedAddress,
-      'ciudad': city,
-    };
+    return {'direccion': formattedAddress, 'ciudad': city};
   }
 }
