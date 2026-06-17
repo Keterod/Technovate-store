@@ -41,6 +41,10 @@
     For more details:
     * https://docs.flutter.dev/platform-integration/web/initialization
   -->
+  <script>
+    // Usar HTML renderer para evitar CORS con imágenes de Google Drive
+    window.flutterWebRenderer = 'html';
+  </script>
   <script src="flutter_bootstrap.js" async></script>
 </body>
 </html>

@@ -14,6 +14,8 @@ class AnalyticsService {
   FirebaseCrashlytics get crashlytics => _crashlytics;
 
   Future<void> initialize() async {
+    if (kIsWeb) return;
+    
     FlutterError.onError = (details) {
       _crashlytics.recordFlutterFatalError(details);
     };
@@ -93,7 +95,7 @@ class AnalyticsService {
 
   Future<void> setUserId(String? uid) async {
     await _analytics.setUserId(id: uid);
-    if (uid != null) {
+    if (uid != null && !kIsWeb) {
       await _crashlytics.setUserIdentifier(uid);
     }
   }

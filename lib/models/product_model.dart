@@ -35,6 +35,8 @@ class ProductModel {
 
   bool get tieneStock => disponible && inventario > 0;
 
+  Map<String, dynamic> get atributos => especificaciones;
+
   String get ram => (especificaciones['ram'] ?? '').toString();
   String get procesador => (especificaciones['procesador'] ?? '').toString();
   String get gpu => (especificaciones['gpu'] ?? '').toString();
@@ -49,21 +51,20 @@ class ProductModel {
   }
 
   factory ProductModel.fromMap(String id, Map<String, dynamic> data) {
+    final especs = (data['especificaciones'] as Map? ?? data['atributos'] as Map? ?? {});
     return ProductModel(
       id: id,
       titulo: (data['titulo'] ?? '').toString(),
       detalle: (data['detalle'] ?? '').toString(),
       fabricante: (data['fabricante'] ?? '').toString(),
-      categoria: (data['categoria'] ?? '').toString(),
+      categoria: (data['categoria'] ?? data['categoriaId'] ?? '').toString(),
       costo: ((data['costo'] ?? 0) as num).toDouble(),
       inventario: ((data['inventario'] ?? 0) as num).toInt(),
       garantia: (data['garantia'] ?? 'Sin garantia').toString(),
       puntuacion: ((data['puntuacion'] ?? 0) as num).toDouble(),
       imagen: (data['imagen'] ?? '').toString(),
       disponible: data['disponible'] != false,
-      especificaciones: Map<String, dynamic>.from(
-        data['especificaciones'] as Map? ?? const {},
-      ),
+      especificaciones: Map<String, dynamic>.from(especs),
       tags: _stringList(data['tags']),
       usoRecomendado: _stringList(data['usoRecomendado']),
     );
@@ -75,6 +76,7 @@ class ProductModel {
       'detalle': detalle,
       'fabricante': fabricante,
       'categoria': categoria,
+      'categoriaId': categoria,
       'costo': costo,
       'inventario': inventario,
       'garantia': garantia,
@@ -82,6 +84,7 @@ class ProductModel {
       'imagen': imagen,
       'disponible': disponible,
       'especificaciones': especificaciones,
+      'atributos': especificaciones,
       'tags': tags,
       'usoRecomendado': usoRecomendado,
     };

@@ -1,11 +1,14 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:google_maps_flutter/google_maps_flutter.dart';
 
 import '../../core/widgets/technovate_widgets.dart';
 import '../../services/analytics_service.dart';
+import '../../services/location_service.dart';
 import '../../services/profile_service.dart';
 import '../../viewmodels/cart_view_model.dart';
 import '../../viewmodels/order_view_model.dart';
+import '../location/mapa_picker_screen.dart';
 import '../profile/profile_screen.dart';
 import 'order_confirmation_screen.dart';
 
@@ -32,8 +35,10 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
   final _telefonoController = TextEditingController();
   final _notasController = TextEditingController();
 
+  final LocationService _locationService = LocationService();
   String _metodoPago = 'Efectivo';
   bool _procesando = false;
+  bool _obteniendoUbicacion = false;
 
   @override
   void initState() {
@@ -54,6 +59,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
       _telefonoController.text = profile.telefono;
     } catch (_) {
       // Silently fall back to empty fields
+    }
+  }
+
+  Future<void> _usarUbicacionActual() async {
+    setState(() => _obteniendoUbicacion = true);
+    try {
+      final pos = await _locationService.obtenerUbicacionUsuario();
+      final result = await _locationService.reverseGeocode(pos);
+      _direccionController.text = result['direccion'] ?? '';
+      _ciudadController.text = result['ciudad'] ?? '';
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Error: $e')),
+      );
+    } finally {
+      if (mounted) setState(() => _obteniendoUbicacion = false);
+    }
+  }
+
+  Future<void> _seleccionarEnMapa() async {
+    final result = await Navigator.push<MapaPickerResult>(
+      context,
+      MaterialPageRoute(builder: (_) => const MapaPickerScreen()),
+    );
+    if (result != null) {
+      _direccionController.text = result.direccion;
+      _ciudadController.text = result.ciudad;
     }
   }
 
@@ -231,6 +264,34 @@ class _CheckoutScreenState extends State<CheckoutScreen> {
                 ],
               ),
               const SizedBox(height: 8),
+              Wrap(
+                spacing: 8,
+                children: [
+                  OutlinedButton.icon(
+                    onPressed: _obteniendoUbicacion ? null : _usarUbicacionActual,
+                    icon: _obteniendoUbicacion
+                        ? const SizedBox(
+                            width: 18,
+                            height: 18,
+                            child: CircularProgressIndicator(strokeWidth: 2),
+                          )
+                        : const Icon(Icons.my_location, size: 18),
+                    label: const Text('Usar mi ubicación'),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                  OutlinedButton.icon(
+                    onPressed: _obteniendoUbicacion ? null : _seleccionarEnMapa,
+                    icon: const Icon(Icons.map, size: 18),
+                    label: const Text('Seleccionar en mapa'),
+                    style: OutlinedButton.styleFrom(
+                      visualDensity: VisualDensity.compact,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(height: 12),
               TextFormField(
                 controller: _nombreController,
                 decoration: const InputDecoration(

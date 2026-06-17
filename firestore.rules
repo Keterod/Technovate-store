@@ -30,5 +30,17 @@ service cloud.firestore {
       // Solo escritura para administradores autenticados
       allow write: if request.auth != null;
     }
+
+    // Reglas para las categorías y atributos dinámicos
+    match /categorias/{categoriaId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    // Reglas para las sucursales de la tienda
+    match /sucursales/{sucursalId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
   }
 }

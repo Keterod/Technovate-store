@@ -1,0 +1,156 @@
+{
+  "categorias": [
+    {
+      "_id": "laptop",
+      "nombre": "Laptop",
+      "icono": "laptop",
+      "orden": 1,
+      "activo": true,
+      "atributos": [
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 1, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "enListado": true, "orden": 2, "validacion": { "minLength": 1, "maxLength": 200 } },
+        { "clave": "procesador", "nombre": "Procesador", "tipo": "text", "requerido": true, "enFiltro": true, "orden": 3 },
+        { "clave": "generacionProcesador", "nombre": "Generación", "tipo": "text", "requerido": false, "orden": 4 },
+        { "clave": "memoriaRam", "nombre": "Memoria RAM", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 5, "opciones": ["4 GB", "8 GB", "12 GB", "16 GB", "24 GB", "32 GB", "64 GB"] },
+        { "clave": "tipoRam", "nombre": "Tipo de RAM", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 6, "opciones": ["DDR3", "DDR4", "DDR5", "LPDDR4", "LPDDR5"] },
+        { "clave": "almacenamiento", "nombre": "Almacenamiento", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 7, "opciones": ["128 GB", "256 GB", "512 GB", "1 TB", "2 TB"] },
+        { "clave": "tipoAlmacenamiento", "nombre": "Tipo almacenamiento", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 8, "opciones": ["SSD", "HDD", "SSD NVMe", "eMMC"] },
+        { "clave": "tarjetaGrafica", "nombre": "Tarjeta gráfica", "tipo": "text", "requerido": false, "enFiltro": true, "orden": 9 },
+        { "clave": "tamañoPantalla", "nombre": "Pantalla", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 10, "opciones": ["13.3\"", "14\"", "15.6\"", "16\"", "17.3\""] },
+        { "clave": "resolucion", "nombre": "Resolución", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 11, "opciones": ["HD (1366x768)", "Full HD (1920x1080)", "2K (2560x1440)", "4K (3840x2160)"] },
+        { "clave": "sistemaOperativo", "nombre": "Sistema operativo", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 12, "opciones": ["Windows 11", "Windows 10", "macOS", "Linux", "Chrome OS", "Sin SO"] },
+        { "clave": "bateria", "nombre": "Batería", "tipo": "text", "requerido": false, "orden": 13 },
+        { "clave": "peso", "nombre": "Peso", "tipo": "text", "requerido": false, "orden": 14 },
+        { "clave": "color", "nombre": "Color", "tipo": "select", "requerido": false, "enFiltro": true, "orden": 15, "opcionesRef": "colores" }
+      ]
+    },
+    {
+      "_id": "smartphone",
+      "nombre": "Smartphone",
+      "icono": "smartphone",
+      "orden": 2,
+      "activo": true,
+      "atributos": [
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 1, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "enListado": true, "orden": 2 },
+        { "clave": "sistemaOperativo", "nombre": "SO", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 3, "opciones": ["Android", "iOS", "HarmonyOS"] },
+        { "clave": "versionSO", "nombre": "Versión SO", "tipo": "text", "requerido": true, "orden": 4 },
+        { "clave": "procesador", "nombre": "Procesador", "tipo": "text", "requerido": true, "enFiltro": true, "orden": 5 },
+        { "clave": "memoriaRam", "nombre": "RAM", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 6, "opciones": ["4 GB", "6 GB", "8 GB", "12 GB", "16 GB", "24 GB"] },
+        { "clave": "almacenamiento", "nombre": "Almacenamiento", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 7, "opciones": ["64 GB", "128 GB", "256 GB", "512 GB", "1 TB"] },
+        { "clave": "camaraPrincipal", "nombre": "Cámara principal", "tipo": "text", "requerido": true, "orden": 8 },
+        { "clave": "camaraFrontal", "nombre": "Cámara frontal", "tipo": "text", "requerido": false, "orden": 9 },
+        { "clave": "bateria", "nombre": "Batería", "tipo": "text", "requerido": true, "orden": 10, "validacion": { "pattern": "^\\d+\\s*mAh$" } },
+        { "clave": "pantalla", "nombre": "Pantalla", "tipo": "text", "requerido": true, "enListado": true, "orden": 11 },
+        { "clave": "resolucion", "nombre": "Resolución", "tipo": "select", "requerido": true, "orden": 12, "opciones": ["HD+", "Full HD+", "2K+", "4K+"] },
+        { "clave": "tecnologiaPantalla", "nombre": "Tecnología pantalla", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 13, "opciones": ["AMOLED", "OLED", "IPS LCD", "Super AMOLED", "Retina"] },
+        { "clave": "conectividad5G", "nombre": "5G", "tipo": "boolean", "requerido": true, "enFiltro": true, "orden": 14 },
+        { "clave": "color", "nombre": "Color", "tipo": "select", "requerido": false, "enFiltro": true, "orden": 15, "opcionesRef": "colores" }
+      ]
+    },
+    {
+      "_id": "tablet",
+      "nombre": "Tablet",
+      "icono": "tablet",
+      "orden": 3,
+      "activo": true,
+      "atributos": [
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 1, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "enListado": true, "orden": 2 },
+        { "clave": "sistemaOperativo", "nombre": "SO", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 3, "opciones": ["iPadOS", "Android", "Windows"] },
+        { "clave": "pantalla", "nombre": "Pantalla", "tipo": "text", "requerido": true, "enListado": true, "orden": 4 },
+        { "clave": "resolucion", "nombre": "Resolución", "tipo": "text", "requerido": true, "orden": 5 },
+        { "clave": "procesador", "nombre": "Procesador", "tipo": "text", "requerido": true, "enFiltro": true, "orden": 6 },
+        { "clave": "ram", "nombre": "RAM", "tipo": "select", "requerido": true, "enListado": true, "orden": 7, "opciones": ["4 GB", "6 GB", "8 GB", "12 GB", "16 GB"] },
+        { "clave": "almacenamiento", "nombre": "Almacenamiento", "tipo": "select", "requerido": true, "enListado": true, "orden": 8, "opciones": ["64 GB", "128 GB", "256 GB", "512 GB", "1 TB"] },
+        { "clave": "camara", "nombre": "Cámara", "tipo": "text", "requerido": false, "orden": 9 },
+        { "clave": "bateria", "nombre": "Batería", "tipo": "text", "requerido": false, "orden": 10 },
+        { "clave": "conectividad", "nombre": "Conectividad", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 11, "opciones": ["Wi-Fi", "Wi-Fi + Cellular", "Wi-Fi + 5G"] }
+      ]
+    },
+    {
+      "_id": "monitor",
+      "nombre": "Monitor",
+      "icono": "monitor",
+      "orden": 4,
+      "activo": true,
+      "atributos": [
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 1, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "enListado": true, "orden": 2 },
+        { "clave": "tamaño", "nombre": "Tamaño", "tipo": "text", "requerido": true, "enFiltro": true, "enListado": true, "orden": 3, "validacion": { "pattern": "^\\d+(\\.\\d+)?\\s*\\\"$" } },
+        { "clave": "resolucion", "nombre": "Resolución", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 4, "opciones": ["Full HD", "2K", "4K", "5K", "8K"] },
+        { "clave": "tipoPanel", "nombre": "Tipo de panel", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 5, "opciones": ["IPS", "VA", "TN", "OLED", "Mini LED"] },
+        { "clave": "frecuencia", "nombre": "Frecuencia", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 6, "opciones": ["60 Hz", "75 Hz", "120 Hz", "144 Hz", "165 Hz", "240 Hz", "360 Hz"] },
+        { "clave": "tiempoRespuesta", "nombre": "Respuesta", "tipo": "select", "requerido": true, "orden": 7, "opciones": ["0.03 ms", "0.5 ms", "1 ms", "2 ms", "4 ms", "5 ms"] },
+        { "clave": "hdr", "nombre": "HDR", "tipo": "select", "requerido": false, "enFiltro": true, "orden": 8, "opciones": ["HDR10", "HDR10+", "Dolby Vision", "DisplayHDR 400", "DisplayHDR 600", "DisplayHDR 1000"] },
+        { "clave": "puertos", "nombre": "Puertos", "tipo": "textarea", "requerido": false, "orden": 9 },
+        { "clave": "curvatura", "nombre": "Curvatura", "tipo": "select", "requerido": false, "enFiltro": true, "orden": 10, "opciones": ["Plano", "1000R", "1500R", "1800R", "3000R"] }
+      ]
+    },
+    {
+      "_id": "periferico",
+      "nombre": "Periféricos",
+      "icono": "keyboard",
+      "orden": 5,
+      "activo": true,
+      "atributos": [
+        { "clave": "tipoPeriferico", "nombre": "Tipo", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 1, "opciones": ["Teclado", "Mouse", "Audífonos", "Micrófono", "Webcam", "Parlantes", "Gamepad", "Hub USB", "Otros"] },
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 2, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "enListado": true, "orden": 3 },
+        { "clave": "conexion", "nombre": "Conexión", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 4, "opciones": ["USB-A", "USB-C", "Bluetooth", "Inalámbrico", "3.5 mm", "HDMI", "DisplayPort", "Dual"] },
+        { "clave": "compatibilidad", "nombre": "Compatibilidad", "tipo": "select", "requerido": true, "orden": 5, "opciones": ["Windows", "macOS", "Linux", "Multiplataforma", "iOS", "Android"] },
+        { "clave": "caracteristicas", "nombre": "Características", "tipo": "textarea", "requerido": false, "orden": 6 }
+      ]
+    },
+    {
+      "_id": "componente",
+      "nombre": "Componentes",
+      "icono": "memory",
+      "orden": 6,
+      "activo": true,
+      "atributos": [
+        { "clave": "tipoComponente", "nombre": "Tipo", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 1, "opciones": ["Procesador", "Placa madre", "Memoria RAM", "GPU", "Disco SSD", "Disco HDD", "Fuente poder", "Gabinete", "Refrigeración"] },
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 2, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "orden": 3 },
+        { "clave": "compatibilidad", "nombre": "Compatibilidad", "tipo": "textarea", "requerido": false, "orden": 4 },
+        { "clave": "socket", "nombre": "Socket", "tipo": "text", "requerido": false, "enFiltro": true, "orden": 5 },
+        { "clave": "frecuencia", "nombre": "Frecuencia", "tipo": "text", "requerido": false, "orden": 6 },
+        { "clave": "capacidad", "nombre": "Capacidad", "tipo": "text", "requerido": false, "orden": 7 },
+        { "clave": "consumoEnergetico", "nombre": "Consumo", "tipo": "text", "requerido": false, "orden": 8 }
+      ]
+    },
+    {
+      "_id": "equipo",
+      "nombre": "Equipos",
+      "icono": "computer",
+      "orden": 7,
+      "activo": true,
+      "atributos": [
+        { "clave": "tipoEquipo", "nombre": "Tipo", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 1, "opciones": ["PC Escritorio", "Workstation", "Servidor", "All-in-One", "Mini PC", "Thin Client"] },
+        { "clave": "marca", "nombre": "Marca", "tipo": "select", "requerido": true, "enFiltro": true, "enListado": true, "orden": 2, "opcionesRef": "marcas" },
+        { "clave": "modelo", "nombre": "Modelo", "tipo": "text", "requerido": true, "orden": 3 },
+        { "clave": "procesador", "nombre": "Procesador", "tipo": "text", "requerido": true, "enFiltro": true, "orden": 4 },
+        { "clave": "ram", "nombre": "RAM", "tipo": "select", "requerido": true, "enListado": true, "orden": 5, "opciones": ["8 GB", "16 GB", "32 GB", "64 GB", "128 GB"] },
+        { "clave": "almacenamiento", "nombre": "Almacenamiento", "tipo": "text", "requerido": true, "enListado": true, "orden": 6 },
+        { "clave": "sistemaOperativo", "nombre": "SO", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 7, "opciones": ["Windows 11 Pro", "Windows 11 Home", "Windows 10 Pro", "Linux", "Sin SO"] },
+        { "clave": "usoRecomendado", "nombre": "Uso recomendado", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 8, "opciones": ["Oficina", "Gaming", "Diseño", "Edición video", "Programación", "Servidor", "Hogar"] }
+      ]
+    },
+    {
+      "_id": "software",
+      "nombre": "Software",
+      "icono": "software",
+      "orden": 8,
+      "activo": true,
+      "atributos": [
+        { "clave": "nombreSoftware", "nombre": "Nombre", "tipo": "text", "requerido": true, "enListado": true, "orden": 1 },
+        { "clave": "version", "nombre": "Versión", "tipo": "text", "requerido": true, "orden": 2 },
+        { "clave": "licencia", "nombre": "Licencia", "tipo": "select", "requerido": true, "orden": 3, "opciones": ["Licencia única", "Suscripción anual", "Suscripción mensual", "Licencia perpetua", "Gratuita"] },
+        { "clave": "duracion", "nombre": "Duración", "tipo": "text", "requerido": false, "orden": 4 },
+        { "clave": "compatibilidad", "nombre": "Compatibilidad", "tipo": "select", "requerido": true, "enFiltro": true, "orden": 5, "opciones": ["Windows", "macOS", "Linux", "iOS", "Android", "Web", "Multiplataforma"] },
+        { "clave": "plataforma", "nombre": "Plataforma", "tipo": "select", "requerido": true, "orden": 6, "opciones": ["PC", "Mac", "Móvil", "Web", "Cloud"] },
+        { "clave": "tipoLicencia", "nombre": "Tipo licencia", "tipo": "select", "requerido": true, "orden": 7, "opciones": ["OEM", "Retail", "Volumen", "Estudiante", "Trial", "Open Source"] }
+      ]
+    }
+  ]
+}

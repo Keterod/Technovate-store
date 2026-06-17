@@ -224,6 +224,11 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       'No se detallaron especificaciones técnicas.',
                       style: TextStyle(color: Colors.grey.shade600),
                     )
+                  else if (specs.length == 1 && specs.containsKey('especificaciones'))
+                    Text(
+                      specs['especificaciones'].toString(),
+                      style: const TextStyle(fontSize: 15, height: 1.5),
+                    )
                   else
                     ...specs.entries.map((e) => Padding(
                           padding: const EdgeInsets.symmetric(vertical: 4),

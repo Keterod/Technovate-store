@@ -4,6 +4,18 @@ import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:http/http.dart' as http;
 
+class SucursalInfo {
+  final String nombre;
+  final String direccion;
+  final LatLng posicion;
+
+  SucursalInfo({
+    required this.nombre,
+    required this.direccion,
+    required this.posicion,
+  });
+}
+
 class LocationService {
   LocationService({
     FirebaseFirestore? firestore,
@@ -63,6 +75,22 @@ class LocationService {
     };
   }
 
+  Future<List<SucursalInfo>> obtenerSucursales() async {
+    final snap = await _firestore.collection('sucursales').get();
+    final list = <SucursalInfo>[];
+    for (final doc in snap.docs) {
+      final data = doc.data();
+      final geo = data['ubicacion'] as GeoPoint?;
+      if (geo == null) continue;
+      list.add(SucursalInfo(
+        nombre: (data['nombre'] ?? '').toString(),
+        direccion: (data['direccion'] ?? '').toString(),
+        posicion: LatLng(geo.latitude, geo.longitude),
+      ));
+    }
+    return list;
+  }
+
   Future<Map<String, String>> obtenerDistanciaYDuracion(
     LatLng origin,
     LatLng destination,
@@ -100,6 +128,51 @@ class LocationService {
     return {
       'distancia': (leg['distance']?['text'] ?? '').toString(),
       'duracion': (leg['duration']?['text'] ?? '').toString(),
+    };
+  }
+
+  Future<Map<String, String>> reverseGeocode(LatLng pos) async {
+    final url = Uri.parse(
+      'https://maps.googleapis.com/maps/api/geocode/json'
+      '?latlng=${pos.latitude},${pos.longitude}'
+      '&key=$_googleMapsApiKey'
+      '&language=es',
+    );
+    final response = await _client.get(url);
+    if (response.statusCode != 200) {
+      throw Exception('Error al consultar Geocoding API (${response.statusCode})');
+    }
+    final data = jsonDecode(response.body) as Map<String, dynamic>;
+    final status = data['status']?.toString() ?? '';
+    if (status != 'OK') {
+      throw Exception('Geocoding API: ${data['error_message'] ?? status}');
+    }
+    final results = data['results'] as List<dynamic>?;
+    if (results == null || results.isEmpty) {
+      throw Exception('No se encontró dirección para esta ubicación');
+    }
+
+    final first = results[0] as Map<String, dynamic>;
+    final formattedAddress = (first['formatted_address'] ?? '').toString();
+
+    String city = '';
+    final components = first['address_components'] as List<dynamic>?;
+    if (components != null) {
+      for (final c in components) {
+        final comp = c as Map<String, dynamic>;
+        final types = (comp['types'] as List<dynamic>?)?.map((e) => e.toString()).toSet() ?? {};
+        if (types.contains('locality') && city.isEmpty) {
+          city = (comp['long_name'] ?? '').toString();
+        }
+        if (types.contains('administrative_area_level_1') && city.isEmpty) {
+          city = (comp['long_name'] ?? '').toString();
+        }
+      }
+    }
+
+    return {
+      'direccion': formattedAddress,
+      'ciudad': city,
     };
   }
 }
