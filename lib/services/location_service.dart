@@ -78,13 +78,25 @@ class LocationService {
 
     final response = await _client.get(url);
     if (response.statusCode != 200) {
-      throw Exception('Error al consultar Directions API (${response.statusCode})');
+      throw Exception('Error al conectar con el servidor de mapas (${response.statusCode})');
     }
 
     final data = jsonDecode(response.body) as Map<String, dynamic>;
     final status = data['status']?.toString() ?? '';
     if (status != 'OK') {
-      throw Exception('Directions API: ${data['error_message'] ?? status}');
+      String mensajeError = 'Error de conexión con el servicio de mapas.';
+      final apiMsg = data['error_message']?.toString() ?? '';
+      
+      if (status == 'REQUEST_DENIED') {
+        mensajeError = 'La API de Directions no está habilitada o autorizada en la consola de Google Cloud para este proyecto. Por favor, actívala en tu consola de Google Cloud para permitir el trazado de rutas.';
+      } else if (status == 'ZERO_RESULTS') {
+        mensajeError = 'No se encontró ninguna ruta de conducción disponible entre tu ubicación y la tienda.';
+      } else if (status == 'OVER_QUERY_LIMIT') {
+        mensajeError = 'Se ha excedido el límite de consultas para el mapa. Inténtalo más tarde.';
+      } else if (apiMsg.isNotEmpty) {
+        mensajeError = 'Error de mapas: $apiMsg';
+      }
+      throw Exception(mensajeError);
     }
 
     final routes = data['routes'] as List<dynamic>?;

@@ -4,6 +4,7 @@ import 'package:flutter/foundation.dart';
 import 'package:firebase_app_check/firebase_app_check.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'core/theme/technovate_theme.dart';
+import 'firebase_options.dart';
 import 'login_screen.dart';
 import 'services/analytics_service.dart';
 import 'services/notification_service.dart';
@@ -11,11 +12,14 @@ import 'views/home/digizone_screen.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await Firebase.initializeApp();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
   await FirebaseAppCheck.instance.activate(
     providerAndroid: kDebugMode
         ? const AndroidDebugProvider()
         : const AndroidPlayIntegrityProvider(),
+    providerWeb: ReCaptchaV3Provider('YOUR_RECAPTCHA_V3_SITE_KEY_PLACEHOLDER'),
   );
   await AnalyticsService().initialize();
 

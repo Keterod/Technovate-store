@@ -830,12 +830,7 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
         color: Colors.white,
         borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
       ),
-      padding: EdgeInsets.fromLTRB(
-        20,
-        20,
-        20,
-        MediaQuery.of(context).viewInsets.bottom + 24,
-      ),
+      padding: const EdgeInsets.fromLTRB(20, 20, 20, 10),
       child: SingleChildScrollView(
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -928,6 +923,7 @@ class _BudgetRecommenderFormState extends State<_BudgetRecommenderForm> {
               ),
               child: const Text('Generar Recomendación Compatible', style: TextStyle(fontSize: 16)),
             ),
+            SizedBox(height: MediaQuery.of(context).viewInsets.bottom + 14),
           ],
         ),
       ),

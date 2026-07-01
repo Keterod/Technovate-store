@@ -197,95 +197,97 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
             zoomControlsEnabled: true,
           ),
         ),
-        Container(
-          padding: const EdgeInsets.all(16),
-          decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceContainerLow,
-            border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
-          ),
-          child: SingleChildScrollView(
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.stretch,
-              children: [
-                Text(
-                  _viewModel.nombreTienda,
-                  style: TextStyle(
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: theme.colorScheme.primary,
+        Flexible(
+          child: Container(
+            padding: const EdgeInsets.all(16),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.surfaceContainerLow,
+              border: Border(top: BorderSide(color: theme.colorScheme.outlineVariant)),
+            ),
+            child: SingleChildScrollView(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  Text(
+                    _viewModel.nombreTienda,
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
-                ),
-                if (_viewModel.direccionTienda.isNotEmpty) ...[
-                  const SizedBox(height: 4),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.store, size: 18, color: theme.colorScheme.primary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _viewModel.direccionTienda,
-                          style: const TextStyle(fontSize: 14),
-                        ),
-                      ),
-                    ],
-                  ),
-                ],
-                if (_viewModel.direccionUsuario.isNotEmpty) ...[
-                  const SizedBox(height: 6),
-                  Row(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Icon(Icons.home, size: 18, color: theme.colorScheme.secondary),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          _viewModel.direccionUsuario,
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: theme.colorScheme.onSurfaceVariant,
+                  if (_viewModel.direccionTienda.isNotEmpty) ...[
+                    const SizedBox(height: 4),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.store, size: 18, color: theme.colorScheme.primary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _viewModel.direccionTienda,
+                            style: const TextStyle(fontSize: 14),
                           ),
                         ),
+                      ],
+                    ),
+                  ],
+                  if (_viewModel.direccionUsuario.isNotEmpty) ...[
+                    const SizedBox(height: 6),
+                    Row(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Icon(Icons.home, size: 18, color: theme.colorScheme.secondary),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            _viewModel.direccionUsuario,
+                            style: TextStyle(
+                              fontSize: 14,
+                              color: theme.colorScheme.onSurfaceVariant,
+                            ),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
+                  const SizedBox(height: 8),
+                  Row(
+                    children: [
+                      Icon(Icons.straighten, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        _viewModel.distancia.isEmpty
+                            ? 'Distancia: —'
+                            : 'Distancia: ${_viewModel.distancia}',
+                        style: const TextStyle(fontSize: 16),
                       ),
                     ],
                   ),
-                ],
-                const SizedBox(height: 8),
-                Row(
-                  children: [
-                    Icon(Icons.straighten, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      _viewModel.distancia.isEmpty
-                          ? 'Distancia: —'
-                          : 'Distancia: ${_viewModel.distancia}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 6),
-                Row(
-                  children: [
-                    Icon(Icons.access_time, color: theme.colorScheme.primary),
-                    const SizedBox(width: 8),
-                    Text(
-                      _viewModel.duracion.isEmpty
-                          ? 'Tiempo estimado: —'
-                          : 'Tiempo estimado: ${_viewModel.duracion}',
-                      style: const TextStyle(fontSize: 16),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 12),
-                ElevatedButton.icon(
-                  onPressed: _abrirGoogleMaps,
-                  icon: const Icon(Icons.map),
-                  label: const Text('Abrir en Google Maps'),
-                  style: ElevatedButton.styleFrom(
-                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  const SizedBox(height: 6),
+                  Row(
+                    children: [
+                      Icon(Icons.access_time, color: theme.colorScheme.primary),
+                      const SizedBox(width: 8),
+                      Text(
+                        _viewModel.duracion.isEmpty
+                            ? 'Tiempo estimado: —'
+                            : 'Tiempo estimado: ${_viewModel.duracion}',
+                        style: const TextStyle(fontSize: 16),
+                      ),
+                    ],
                   ),
-                ),
-              ],
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: _abrirGoogleMaps,
+                    icon: const Icon(Icons.map),
+                    label: const Text('Abrir en Google Maps'),
+                    style: ElevatedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ],
+              ),
             ),
           ),
         ),

@@ -53,8 +53,8 @@ class ConciergeService {
       final hasAlerts = drops.isNotEmpty || stocks.isNotEmpty;
 
       if (!hasHistory && !hasAlerts) {
-        return 'Bienvenido a TECHNOVATE! Soy tu asistente personal de compras. '
-            'Explora la tienda o preguntame lo que necesites.';
+        return '¡Bienvenido a TECHNOVATE! Soy tu asistente personal de compras. '
+            'Puedes probar tu configuración de presupuestos presionando el ícono de la carita (?) abajo. ¡Pregúntame lo que necesites!';
       }
 
       final viewsText = views.map((v) => '- ${v['titulo']} (S/ ${(v['costo'] as num).toStringAsFixed(2)})').join('\n');
@@ -67,6 +67,7 @@ Eres el asistente concierge de TECHNOVATE, tienda peruana de tecnologia.
 
 Genera UN SALUDO BREVISIMO (max 3 lineas) en espanol peruano natural, como si fueras un amigo vendedor.
 Usa el historial del usuario para personalizar.
+Importante: Recuerdale de manera amigable que puede configurar su presupuesto presionando el icono de la carita (?) que esta al lado del chat.
 
 Historial:
 $viewsText
@@ -89,7 +90,7 @@ Responde SOLO el saludo, nada mas.
     if (stocks != null && stocks.isNotEmpty) {
       return 'Volvieron a estar disponibles! ${stocks.length} producto(s) de tus favoritos ya tienen stock.';
     }
-    return 'Hola de nuevo! En que puedo ayudarte hoy?';
+    return '¡Hola de nuevo! Recuerda que puedes configurar tu presupuesto con el ícono (?) al lado del chat. ¿En qué te puedo ayudar hoy?';
   }
 
   Future<List<ProductModel>> obtenerSugerencias() async {

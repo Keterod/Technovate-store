@@ -1,6 +1,7 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:google_sign_in/google_sign_in.dart';
 import 'auth_utils.dart';
 import 'registro_screen.dart';
@@ -61,14 +62,28 @@ class _LoginScreenState extends State<LoginScreen> {
   Future<void> _loginConGoogle() async {
     setState(() => _cargandoGoogle = true);
     try {
-      final googleUser = await GoogleSignIn().signIn();
-      if (googleUser == null) { if (mounted) setState(() => _cargandoGoogle = false); return; }
-      final googleAuth = await googleUser.authentication;
-      final credential = GoogleAuthProvider.credential(
-        accessToken: googleAuth.accessToken,
-        idToken: googleAuth.idToken,
-      );
-      final userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      final UserCredential userCredential;
+      if (kIsWeb) {
+        final googleProvider = GoogleAuthProvider();
+        // En Web, la mejor práctica con Firebase Hosting es usar signInWithPopup.
+        // Esto evita depender del plugin google_sign_in en web y previene
+        // errores de aserción nula ("Null check operator used on a null value").
+        userCredential = await FirebaseAuth.instance.signInWithPopup(googleProvider);
+      } else {
+        final googleSignIn = GoogleSignIn();
+        final googleUser = await googleSignIn.signIn();
+        if (googleUser == null) {
+          if (mounted) setState(() => _cargandoGoogle = false);
+          return;
+        }
+        final googleAuth = await googleUser.authentication;
+        final credential = GoogleAuthProvider.credential(
+          accessToken: googleAuth.accessToken,
+          idToken: googleAuth.idToken,
+        );
+        userCredential = await FirebaseAuth.instance.signInWithCredential(credential);
+      }
+
       final user = userCredential.user;
       if (user != null && userCredential.additionalUserInfo?.isNewUser == true) {
         final nombreCompleto = user.displayName ?? '';
