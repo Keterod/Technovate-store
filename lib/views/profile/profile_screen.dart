@@ -5,6 +5,7 @@ import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
 import 'package:permission_handler/permission_handler.dart';
 
+import '../../core/session/session_manager.dart';
 import '../../services/profile_service.dart';
 import '../sensors/sensores_screen.dart';
 
@@ -149,15 +150,15 @@ class _ProfileScreenState extends State<ProfileScreen> {
     try {
       await _profileService.saveProfile(profile);
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Perfil guardado')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Perfil guardado')));
       Navigator.pop(context);
     } catch (e) {
       if (!mounted) return;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text('Error: $e')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Error: $e')));
     } finally {
       if (mounted) setState(() => _guardando = false);
     }
@@ -175,6 +176,13 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        SessionManager.resetNavigationToRoot();
+      });
+      return const Scaffold(body: Center(child: Text('Sesión cerrada')));
+    }
+
     return Scaffold(
       appBar: AppBar(title: const Text('Mi Perfil')),
       body: _cargando
@@ -206,10 +214,22 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
                         ),
                       ],
+                  CircleAvatar(
+                    radius: 40,
+                    backgroundColor: Theme.of(
+                      context,
+                    ).colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.person,
+                      size: 40,
+                      color: Theme.of(context).colorScheme.onPrimaryContainer,
                     ),
                   ),
                   const SizedBox(height: 8),
-                  Text(user?.email ?? '', style: Theme.of(context).textTheme.bodyMedium),
+                  Text(
+                    user.email ?? '',
+                    style: Theme.of(context).textTheme.bodyMedium,
+                  ),
                   const SizedBox(height: 24),
                   TextFormField(
                     controller: _nombreController,
@@ -251,7 +271,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onPressed: _guardando ? null : _guardar,
                       child: _guardando
                           ? const SizedBox(
-                              width: 20, height: 20,
+                              width: 20,
+                              height: 20,
                               child: CircularProgressIndicator(strokeWidth: 2),
                             )
                           : const Text('Guardar perfil'),
@@ -265,6 +286,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                         Navigator.push(
                           context,
                           MaterialPageRoute(builder: (_) => const SensoresScreen()),
+                          MaterialPageRoute(
+                            builder: (_) => const SensoresScreen(),
+                          ),
                         );
                       },
                       icon: const Icon(Icons.sensors, size: 20),
@@ -280,7 +304,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                           context: context,
                           builder: (ctx) => AlertDialog(
                             title: const Text('Cerrar sesión'),
-                            content: const Text('¿Estás seguro de cerrar sesión?'),
+                            content: const Text(
+                              '¿Estás seguro de cerrar sesión?',
+                            ),
                             actions: [
                               TextButton(
                                 onPressed: () => Navigator.pop(ctx),
@@ -293,6 +319,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                                   if (context.mounted) {
                                     Navigator.pop(context);
                                   }
+                                  await SessionManager.logoutAndResetNavigation(
+                                    reason: 'manual',
+                                  );
                                 },
                                 child: const Text('Cerrar sesión'),
                               ),

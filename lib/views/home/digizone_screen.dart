@@ -1,16 +1,17 @@
-import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 
 import '../../viewmodels/cart_view_model.dart';
-import '../admin/digizone_admin_screen.dart';
 import '../assistant/ai_assistant_screen.dart';
 import '../cart/cart_screen.dart';
 import '../location/ubicacion_screen.dart';
 import '../store/digizone_tienda_screen.dart';
+import '../location/ubicacion_screen.dart';
 import 'home_landing_screen.dart';
 
 class DigizoneScreen extends StatefulWidget {
-  const DigizoneScreen({super.key});
+  final String? userEmail;
+
+  const DigizoneScreen({super.key, this.userEmail});
 
   @override
   State<DigizoneScreen> createState() => _DigizoneScreenState();
@@ -24,9 +25,7 @@ class _DigizoneScreenState extends State<DigizoneScreen>
   late final AnimationController _iconAnimationController;
   late final Animation<double> _iconScale;
 
-  bool get _esAdmin =>
-      FirebaseAuth.instance.currentUser?.email?.toLowerCase() ==
-      'admin@gmail.com';
+
 
   List<Widget> get _screens {
     if (_esAdmin) {
@@ -45,6 +44,8 @@ class _DigizoneScreenState extends State<DigizoneScreen>
         const UbicacionScreen(),
       ];
     }
+        // Admin UI block removed; admin now has separate login and guard.
+
     return [
       HomeLandingScreen(
         onNavigateTienda: (categoria) {
@@ -53,6 +54,12 @@ class _DigizoneScreenState extends State<DigizoneScreen>
         },
         onNavigateAsistente: () => setState(() => _selectedIndex = 3),
         onNavigateCarrito: () => setState(() => _selectedIndex = 2),
+        onNavigateUbicacion: () {
+          Navigator.push(
+            context,
+            MaterialPageRoute(builder: (_) => const UbicacionScreen()),
+          );
+        },
         cartViewModel: cartViewModel,
       ),
       DigizoneTiendaScreen(
@@ -92,6 +99,8 @@ class _DigizoneScreenState extends State<DigizoneScreen>
         ),
       ];
     }
+    // Admin navigation items removed; admin uses separate routes.
+
     return [
       const BottomNavigationBarItem(
         icon: Icon(Icons.home),
@@ -113,7 +122,7 @@ class _DigizoneScreenState extends State<DigizoneScreen>
     ];
   }
 
-  int get _indiceCarrito => _esAdmin ? 2 : 2;
+  int get _indiceCarrito => 2;
 
   @override
   void initState() {
@@ -129,6 +138,12 @@ class _DigizoneScreenState extends State<DigizoneScreen>
       ),
     );
     cartViewModel.addListener(_onCartUpdated);
+  }
+
+  @override
+  void didUpdateWidget(DigizoneScreen old) {
+    super.didUpdateWidget(old);
+    if (old.userEmail != widget.userEmail) setState(() {});
   }
 
   @override

@@ -10,6 +10,7 @@ class HomeLandingScreen extends StatelessWidget {
   final void Function(String? categoria) onNavigateTienda;
   final VoidCallback onNavigateAsistente;
   final VoidCallback onNavigateCarrito;
+  final VoidCallback onNavigateUbicacion;
   final CartViewModel cartViewModel;
 
   const HomeLandingScreen({
@@ -17,6 +18,7 @@ class HomeLandingScreen extends StatelessWidget {
     required this.onNavigateTienda,
     required this.onNavigateAsistente,
     required this.onNavigateCarrito,
+    required this.onNavigateUbicacion,
     required this.cartViewModel,
   });
 
@@ -31,11 +33,76 @@ class HomeLandingScreen extends StatelessWidget {
               onNavigateAsistente: onNavigateAsistente,
             ),
             _CategoriasGrid(onNavigateTienda: onNavigateTienda),
+            _VisitOurStore(onNavigateUbicacion: onNavigateUbicacion),
             _ProductosDestacados(
               cartViewModel: cartViewModel,
               onNavigateCarrito: onNavigateCarrito,
             ),
             const SizedBox(height: 24),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+class _VisitOurStore extends StatelessWidget {
+  final VoidCallback onNavigateUbicacion;
+
+  const _VisitOurStore({required this.onNavigateUbicacion});
+
+  @override
+  Widget build(BuildContext context) {
+    return Padding(
+      padding: const EdgeInsets.all(16),
+      child: Container(
+        padding: const EdgeInsets.all(20),
+        decoration: BoxDecoration(
+          color: Theme.of(context).colorScheme.secondaryContainer,
+          borderRadius: BorderRadius.circular(16),
+          border: Border.all(color: Theme.of(context).colorScheme.outlineVariant),
+        ),
+        child: Row(
+          children: [
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    'Visita nuestra tienda',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Encuéntranos y conoce nuestros productos en persona.',
+                    style: TextStyle(
+                      fontSize: 14,
+                      color: Theme.of(context).colorScheme.onSecondaryContainer.withValues(alpha: 0.8),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  ElevatedButton.icon(
+                    onPressed: onNavigateUbicacion,
+                    icon: const Icon(Icons.location_on),
+                    label: const Text('Cómo llegar'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Theme.of(context).colorScheme.secondary,
+                      foregroundColor: Theme.of(context).colorScheme.onSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(width: 12),
+            Icon(
+              Icons.store_mall_directory,
+              size: 64,
+              color: Theme.of(context).colorScheme.secondary.withValues(alpha: 0.5),
+            ),
           ],
         ),
       ),

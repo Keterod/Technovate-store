@@ -26,8 +26,6 @@ dependencies:
   firebase_analytics: ^12.4.2
   firebase_crashlytics: ^5.2.3
   intl: ^0.20.2
-  image_picker: ^1.2.3
-  permission_handler: ^12.0.3
   sensors_plus: ^7.0.0
 
 dev_dependencies:
@@ -40,6 +38,7 @@ flutter_launcher_icons:
   android: true
   ios: true
   image_path: "assets/images/technovate_logo.png"
+  remove_alpha_ios: true
   adaptive_icon_background: "#FFFFFF"
   adaptive_icon_foreground: "assets/images/technovate_logo.png"
 
@@ -47,3 +46,4 @@ flutter:
   uses-material-design: true
   assets:
     - assets/images/
+    - assets/seed/

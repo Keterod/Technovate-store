@@ -26,11 +26,6 @@ class _SensoresScreenState extends State<SensoresScreen> {
   double? _anguloBrujula;
   StreamSubscription<Position>? _gpsSubscription;
 
-  bool _accelerometerTimeout = false;
-  bool _gyroscopeTimeout = false;
-  bool _magnetometerTimeout = false;
-  Timer? _timeoutTimer;
-
   @override
   void initState() {
     super.initState();
@@ -199,7 +194,6 @@ class _SensoresScreenState extends State<SensoresScreen> {
               values: accelerometer,
               labels: const ['X', 'Y', 'Z'],
               color: Colors.blue,
-              timeout: _accelerometerTimeout,
             ),
             const SizedBox(height: 16),
             _SensorCard(
@@ -208,7 +202,6 @@ class _SensoresScreenState extends State<SensoresScreen> {
               values: gyroscope,
               labels: const ['X', 'Y', 'Z'],
               color: Colors.green,
-              timeout: _gyroscopeTimeout,
             ),
             const SizedBox(height: 16),
             _SensorCard(
@@ -219,7 +212,6 @@ class _SensoresScreenState extends State<SensoresScreen> {
                   .toList(),
               labels: const ['X', 'Y', 'Z'],
               color: Colors.red,
-              timeout: _magnetometerTimeout,
             ),
           ],
         ),
@@ -259,11 +251,15 @@ class _SensoresScreenState extends State<SensoresScreen> {
               ),
             const SizedBox(height: 16),
             SizedBox(
-              width: 80,
-              height: 80,
+              width: 180,
+              height: 180,
               child: Stack(
                 alignment: Alignment.center,
                 children: [
+                  Transform.rotate(
+                    angle: -(brujula * math.pi / 180),
+                    child: Icon(Icons.navigation, size: 160, color: Colors.orange.shade200),
+                  ),
                   if (rumbo != null)
                     Transform.rotate(
                       angle: ((rumbo - brujula) * math.pi / 180),
@@ -384,7 +380,6 @@ class _SensorCard extends StatelessWidget {
   final List<String>? values;
   final List<String> labels;
   final Color color;
-  final bool timeout;
 
   const _SensorCard({
     required this.title,
@@ -392,7 +387,6 @@ class _SensorCard extends StatelessWidget {
     required this.values,
     required this.labels,
     required this.color,
-    required this.timeout,
   });
 
   @override
@@ -417,17 +411,7 @@ class _SensorCard extends StatelessWidget {
             ),
             const SizedBox(height: 20),
             if (values == null)
-              Center(
-                child: timeout
-                    ? const Padding(
-                        padding: EdgeInsets.symmetric(vertical: 8),
-                        child: Text(
-                          'Sensor no detectado o no disponible',
-                          style: TextStyle(color: Colors.red, fontSize: 14),
-                        ),
-                      )
-                    : const CircularProgressIndicator(),
-              )
+              const Center(child: CircularProgressIndicator())
             else
               Row(
                 mainAxisAlignment: MainAxisAlignment.spaceAround,

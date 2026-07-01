@@ -36,7 +36,7 @@ String convertirEnlaceDriveADirecto(String enlaceDrive) {
 
   if (match != null && match.groupCount >= 1) {
     final id = match.group(1);
-    return 'https://drive.google.com/uc?export=view&id=$id';
+    return 'https://lh3.googleusercontent.com/d/$id';
   }
   return enlaceDrive;
 }

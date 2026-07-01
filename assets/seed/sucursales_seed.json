@@ -1,0 +1,28 @@
+{
+  "sucursales": [
+    {
+      "nombre": "TECHNOVATE Sancarlos",
+      "direccion": "Av. San Carlos 123, Huancayo, Perú",
+      "ubicacion": {
+        "_latitude": -12.0675,
+        "_longitude": -75.2090
+      }
+    },
+    {
+      "nombre": "TECHNOVATE Real Plaza",
+      "direccion": "Real Plaza Huancayo, Av. Ferrocarril 456, Huancayo",
+      "ubicacion": {
+        "_latitude": -12.0650,
+        "_longitude": -75.2080
+      }
+    },
+    {
+      "nombre": "TECHNOVATE Centro",
+      "direccion": "Jr. La Merced 789, Huancayo",
+      "ubicacion": {
+        "_latitude": -12.0685,
+        "_longitude": -75.2105
+      }
+    }
+  ]
+}

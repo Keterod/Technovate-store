@@ -12,6 +12,7 @@ class AnalyticsService {
 
   FirebaseAnalytics get analytics => _analytics;
   FirebaseCrashlytics get crashlytics => _crashlytics;
+  static const Duration _timeout = Duration(seconds: 3);
 
   Future<void> initialize() async {
     if (!kIsWeb) {
@@ -23,6 +24,51 @@ class AnalyticsService {
         return true;
       };
       await _crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
+    if (kIsWeb) return;
+
+    FlutterError.onError = (details) {
+      debugPrint('DEBUG GLOBAL ERROR: flutter ${details.exception}');
+      _safeCrashlytics(
+        'flutter_fatal',
+        () => _crashlytics.recordFlutterFatalError(details),
+      );
+    };
+    PlatformDispatcher.instance.onError = (error, stack) {
+      debugPrint('DEBUG GLOBAL ERROR: platform $error');
+      _safeCrashlytics(
+        'platform_fatal',
+        () => _crashlytics.recordError(error, stack, fatal: true),
+      );
+      return true;
+    };
+    await _safeCrashlytics(
+      'initialize',
+      () => _crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode),
+    );
+  }
+
+  Future<void> _safeAnalytics(
+    String event,
+    Future<void> Function() operation,
+  ) async {
+    try {
+      await operation().timeout(_timeout);
+      debugPrint('DEBUG ANALYTICS: event=$event ok');
+    } catch (e) {
+      debugPrint('DEBUG ANALYTICS: event=$event error=$e');
+    }
+  }
+
+  Future<void> _safeCrashlytics(
+    String event,
+    Future<void> Function() operation,
+  ) async {
+    if (kIsWeb) return;
+    try {
+      await operation().timeout(_timeout);
+      debugPrint('DEBUG ANALYTICS: event=crashlytics_$event ok');
+    } catch (e) {
+      debugPrint('DEBUG ANALYTICS: event=crashlytics_$event error=$e');
     }
   }
 
@@ -32,14 +78,17 @@ class AnalyticsService {
     required double price,
     required String category,
   }) async {
-    await _analytics.logEvent(
-      name: 'product_view',
-      parameters: {
-        'product_id': productId,
-        'product_name': productName,
-        'price': price,
-        'category': category,
-      },
+    await _safeAnalytics(
+      'product_view',
+      () => _analytics.logEvent(
+        name: 'product_view',
+        parameters: {
+          'product_id': productId,
+          'product_name': productName,
+          'price': price,
+          'category': category,
+        },
+      ),
     );
   }
 
@@ -49,47 +98,51 @@ class AnalyticsService {
     required double price,
     required int quantity,
   }) async {
-    await _analytics.logEvent(
-      name: 'add_to_cart',
-      parameters: {
-        'product_id': productId,
-        'product_name': productName,
-        'price': price,
-        'quantity': quantity,
-      },
+    await _safeAnalytics(
+      'add_to_cart',
+      () => _analytics.logEvent(
+        name: 'add_to_cart',
+        parameters: {
+          'product_id': productId,
+          'product_name': productName,
+          'price': price,
+          'quantity': quantity,
+        },
+      ),
     );
   }
 
-  Future<void> logBeginCheckout({
-    required double value,
-  }) async {
-    await _analytics.logBeginCheckout(
-      value: value,
+  Future<void> logBeginCheckout({required double value}) async {
+    await _safeAnalytics(
+      'begin_checkout',
+      () => _analytics.logBeginCheckout(value: value),
     );
   }
 
-  Future<void> logPurchase({
-    required double value,
-  }) async {
-    await _analytics.logPurchase(
-      value: value,
+  Future<void> logPurchase({required double value}) async {
+    await _safeAnalytics(
+      'purchase',
+      () => _analytics.logPurchase(value: value),
     );
   }
 
   Future<void> logSearch(String searchTerm) async {
-    await _analytics.logSearch(searchTerm: searchTerm);
+    await _safeAnalytics(
+      'search',
+      () => _analytics.logSearch(searchTerm: searchTerm),
+    );
   }
 
   Future<void> logReview({
     required String productId,
     required int rating,
   }) async {
-    await _analytics.logEvent(
-      name: 'product_review',
-      parameters: {
-        'product_id': productId,
-        'rating': rating,
-      },
+    await _safeAnalytics(
+      'product_review',
+      () => _analytics.logEvent(
+        name: 'product_review',
+        parameters: {'product_id': productId, 'rating': rating},
+      ),
     );
   }
 
@@ -97,6 +150,12 @@ class AnalyticsService {
     await _analytics.setUserId(id: uid);
     if (uid != null && !kIsWeb) {
       await _crashlytics.setUserIdentifier(uid);
+    await _safeAnalytics('set_user_id', () => _analytics.setUserId(id: uid));
+    if (uid != null && !kIsWeb) {
+      await _safeCrashlytics(
+        'set_user_identifier',
+        () => _crashlytics.setUserIdentifier(uid),
+      );
     }
   }
 }

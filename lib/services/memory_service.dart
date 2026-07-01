@@ -1,17 +1,19 @@
+import 'dart:async';
+
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart';
 
 class MemoryService {
   final FirebaseFirestore _firestore;
   final FirebaseAuth _auth;
 
-  MemoryService({
-    FirebaseFirestore? firestore,
-    FirebaseAuth? auth,
-  })  : _firestore = firestore ?? FirebaseFirestore.instance,
-        _auth = auth ?? FirebaseAuth.instance;
+  MemoryService({FirebaseFirestore? firestore, FirebaseAuth? auth})
+    : _firestore = firestore ?? FirebaseFirestore.instance,
+      _auth = auth ?? FirebaseAuth.instance;
 
   String? get _uid => _auth.currentUser?.uid;
+  static const Duration _timeout = Duration(seconds: 5);
 
   Future<void> trackProductView({
     required String productoId,
@@ -21,19 +23,30 @@ class MemoryService {
   }) async {
     final uid = _uid;
     if (uid == null) return;
+    debugPrint('DEBUG MEMORY: track view start productId=$productoId');
     try {
       await _firestore
           .collection('Usuarios')
           .doc(uid)
           .collection('HistorialVistas')
           .add({
-        'productoId': productoId,
-        'titulo': titulo,
-        'costo': costo,
-        'imagen': imagen,
-        'vistoEn': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {}
+            'productoId': productoId,
+            'titulo': titulo,
+            'costo': costo,
+            'imagen': imagen,
+            'vistoEn': FieldValue.serverTimestamp(),
+          })
+          .timeout(_timeout);
+      debugPrint('DEBUG MEMORY: track view done productId=$productoId');
+    } on TimeoutException catch (e) {
+      debugPrint(
+        'DEBUG MEMORY: track view error productId=$productoId error=$e',
+      );
+    } catch (e) {
+      debugPrint(
+        'DEBUG MEMORY: track view error productId=$productoId error=$e',
+      );
+    }
   }
 
   Future<void> trackSearch(String query) async {
@@ -45,10 +58,12 @@ class MemoryService {
           .doc(uid)
           .collection('HistorialBusquedas')
           .add({
-        'query': query.trim().toLowerCase(),
-        'buscadoEn': FieldValue.serverTimestamp(),
-      });
-    } catch (_) {}
+            'query': query.trim().toLowerCase(),
+            'buscadoEn': FieldValue.serverTimestamp(),
+          });
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: track search error=$e');
+    }
   }
 
   Future<List<Map<String, dynamic>>> getRecentViews({int limit = 10}) async {
@@ -61,13 +76,15 @@ class MemoryService {
           .collection('HistorialVistas')
           .orderBy('vistoEn', descending: true)
           .limit(limit)
-          .get();
+          .get()
+          .timeout(_timeout);
       return snapshot.docs.map((doc) {
         final data = doc.data();
         data['docId'] = doc.id;
         return data;
       }).toList();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: recent views error=$e');
       return [];
     }
   }
@@ -82,12 +99,14 @@ class MemoryService {
           .collection('HistorialBusquedas')
           .orderBy('buscadoEn', descending: true)
           .limit(limit)
-          .get();
+          .get()
+          .timeout(_timeout);
       return snapshot.docs
           .map((doc) => (doc.data()['query'] ?? '').toString())
           .where((q) => q.isNotEmpty)
           .toList();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: recent searches error=$e');
       return [];
     }
   }
@@ -101,16 +120,22 @@ class MemoryService {
           .doc(uid)
           .collection('Favoritos')
           .doc(productoId);
-      final snapshot = await doc.get();
+      final snapshot = await doc.get().timeout(_timeout);
       if (snapshot.exists) {
-        await doc.delete();
+        await doc.delete().timeout(_timeout);
       } else {
-        await doc.set({
-          'agregadoEn': FieldValue.serverTimestamp(),
-          'estabaAgotado': false,
-        });
+        await doc
+            .set({
+              'agregadoEn': FieldValue.serverTimestamp(),
+              'estabaAgotado': false,
+            })
+            .timeout(_timeout);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint(
+        'DEBUG MEMORY: toggle favorite error productId=$productoId error=$e',
+      );
+    }
   }
 
   Future<bool> isFavorite(String productoId) async {
@@ -122,9 +147,13 @@ class MemoryService {
           .doc(uid)
           .collection('Favoritos')
           .doc(productoId)
-          .get();
+          .get()
+          .timeout(_timeout);
       return doc.exists;
-    } catch (_) {
+    } catch (e) {
+      debugPrint(
+        'DEBUG MEMORY: favorite check error productId=$productoId error=$e',
+      );
       return false;
     }
   }
@@ -137,9 +166,11 @@ class MemoryService {
           .collection('Usuarios')
           .doc(uid)
           .collection('Favoritos')
-          .get();
+          .get()
+          .timeout(_timeout);
       return snapshot.docs.map((d) => d.id).toSet();
-    } catch (_) {
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: favorite ids error=$e');
       return {};
     }
   }
@@ -155,26 +186,33 @@ class MemoryService {
           .collection('HistorialVistas')
           .orderBy('vistoEn', descending: true)
           .limit(10)
-          .get();
+          .get()
+          .timeout(_timeout);
       for (final doc in views.docs) {
         final pid = doc.data()['productoId']?.toString();
         if (pid != null) ids.add(pid);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: watched views error=$e');
+    }
     try {
       final favs = await _firestore
           .collection('Usuarios')
           .doc(uid)
           .collection('Favoritos')
-          .get();
+          .get()
+          .timeout(_timeout);
       for (final doc in favs.docs) {
         ids.add(doc.id);
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: watched favorites error=$e');
+    }
     return ids.toList();
   }
 
   Future<List<Map<String, dynamic>>> checkPriceDrops() async {
+    debugPrint('DEBUG MEMORY: check price drops skipped on detail');
     final uid = _uid;
     if (uid == null) return [];
     final drops = <Map<String, dynamic>>[];
@@ -185,8 +223,13 @@ class MemoryService {
           .collection('HistorialVistas')
           .orderBy('vistoEn', descending: true)
           .limit(20)
-          .get();
-      final productosSnapshot = await _firestore.collection('digizone_productos').get();
+          .get()
+          .timeout(_timeout);
+      final productosSnapshot = await _firestore
+          .collection('digizone_productos')
+          .limit(50)
+          .get()
+          .timeout(_timeout);
       final productos = <String, Map<String, dynamic>>{};
       for (final doc in productosSnapshot.docs) {
         productos[doc.id] = doc.data();
@@ -216,7 +259,9 @@ class MemoryService {
           });
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: check price drops error=$e');
+    }
     return drops;
   }
 
@@ -229,9 +274,14 @@ class MemoryService {
           .collection('Usuarios')
           .doc(uid)
           .collection('Favoritos')
-          .get();
+          .get()
+          .timeout(_timeout);
       if (favs.docs.isEmpty) return [];
-      final productosSnapshot = await _firestore.collection('digizone_productos').get();
+      final productosSnapshot = await _firestore
+          .collection('digizone_productos')
+          .limit(50)
+          .get()
+          .timeout(_timeout);
       final productos = <String, Map<String, dynamic>>{};
       for (final doc in productosSnapshot.docs) {
         productos[doc.id] = doc.data();
@@ -254,7 +304,9 @@ class MemoryService {
           }
         }
       }
-    } catch (_) {}
+    } catch (e) {
+      debugPrint('DEBUG MEMORY: check stock returns error=$e');
+    }
     return alerts;
   }
 }

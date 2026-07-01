@@ -1,3 +1,5 @@
+import 'dart:async';
+
 import 'package:flutter/material.dart';
 import 'package:intl/intl.dart';
 
@@ -41,34 +43,80 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
   void initState() {
     super.initState();
     _product = widget.product;
+    debugPrint('DEBUG DETAIL: init productId=${_product.id}');
     _verificarFavorito();
     _cargarReviews();
-    AnalyticsService().logProductView(
-      productId: _product.id,
-      productName: _product.titulo,
-      price: _product.costo,
-      category: _product.categoria,
+    _trackProductView();
+    unawaited(
+      AnalyticsService().logProductView(
+        productId: _product.id,
+        productName: _product.titulo,
+        price: _product.costo,
+        category: _product.categoria,
+      ),
     );
   }
 
   Future<void> _cargarReviews() async {
-    final stats = await _reviewService.getRatingStats(_product.id);
-    final reviews = await _reviewService.getReviews(_product.id);
-    final yaResenio = await _reviewService.hasUserReviewed(_product.id);
-    if (mounted) {
-      setState(() {
-        _reviews = reviews;
-        _ratingPromedio = stats['average'] as double;
-        _totalResenas = stats['count'] as int;
-        _cargandoReviews = false;
-        _yaResenio = yaResenio;
-      });
+    debugPrint('DEBUG DETAIL: load reviews start');
+    try {
+      final results = await Future.wait<dynamic>([
+        _reviewService.getRatingStats(_product.id),
+        _reviewService.getReviews(_product.id),
+        _reviewService.hasUserReviewed(_product.id),
+      ]).timeout(const Duration(seconds: 15));
+
+      final stats = results[0] as Map<String, dynamic>;
+      final reviews = results[1] as List<ReviewModel>;
+      final yaResenio = results[2] as bool;
+
+      if (mounted) {
+        setState(() {
+          _reviews = reviews;
+          _ratingPromedio = stats['average'] as double;
+          _totalResenas = stats['count'] as int;
+          _cargandoReviews = false;
+          _yaResenio = yaResenio;
+        });
+      }
+    } catch (e, stackTrace) {
+      debugPrint('DEBUG DETAIL: load reviews error=$e');
+      debugPrint('DEBUG DETAIL: load reviews stack=$stackTrace');
+      if (mounted) {
+        setState(() => _cargandoReviews = false);
+      }
+    } finally {
+      debugPrint('DEBUG DETAIL: load reviews ready');
     }
   }
 
   Future<void> _verificarFavorito() async {
-    final fav = await _memory.isFavorite(_product.id);
-    if (mounted) setState(() => _esFavorito = fav);
+    try {
+      final fav = await _memory
+          .isFavorite(_product.id)
+          .timeout(const Duration(seconds: 5));
+      if (mounted) setState(() => _esFavorito = fav);
+    } catch (e) {
+      debugPrint('DEBUG DETAIL: favorite check error=$e');
+    }
+  }
+
+  void _trackProductView() {
+    debugPrint('DEBUG DETAIL: track view start');
+    unawaited(
+      _memory
+          .trackProductView(
+            productoId: _product.id,
+            titulo: _product.titulo,
+            costo: _product.costo,
+            imagen: _product.imagen,
+          )
+          .timeout(const Duration(seconds: 5))
+          .then((_) => debugPrint('DEBUG DETAIL: track view done'))
+          .catchError((error) {
+            debugPrint('DEBUG DETAIL: track view error=$error');
+          }),
+    );
   }
 
   Future<void> _toggleFav() async {
@@ -81,9 +129,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       final error = widget.cartViewModel.addProduct(_product);
       if (error != null) {
         if (!mounted) return;
-        ScaffoldMessenger.of(context).showSnackBar(
-          SnackBar(content: Text(error)),
-        );
+        ScaffoldMessenger.of(
+          context,
+        ).showSnackBar(SnackBar(content: Text(error)));
         return;
       }
     }
@@ -100,6 +148,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
 
   @override
   Widget build(BuildContext context) {
+    debugPrint('DEBUG DETAIL: build');
     final sinStock = !_product.tieneStock;
     final maximo = _product.inventario;
     final specs = _product.especificaciones;
@@ -113,7 +162,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
               _esFavorito ? Icons.favorite : Icons.favorite_border,
               color: _esFavorito ? Colors.red : Colors.white,
             ),
-            tooltip: _esFavorito ? 'Quitar de favoritos' : 'Agregar a favoritos',
+            tooltip: _esFavorito
+                ? 'Quitar de favoritos'
+                : 'Agregar a favoritos',
             onPressed: _toggleFav,
           ),
         ],
@@ -128,10 +179,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 borderRadius: const BorderRadius.vertical(
                   bottom: Radius.circular(16),
                 ),
-                child: imagenProducto(
-                  _product.imagen,
-                  height: 260,
-                ),
+                child: imagenProducto(_product.imagen, height: 260),
               ),
             ),
             Padding(
@@ -164,15 +212,18 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                         child: Row(
                           mainAxisSize: MainAxisSize.min,
                           children: [
-                            Icon(Icons.star,
-                                size: 18, color: Colors.amber.shade700),
+                            Icon(
+                              Icons.star,
+                              size: 18,
+                              color: Colors.amber.shade700,
+                            ),
                             const SizedBox(width: 4),
                             Text(
                               _product.puntuacion.toStringAsFixed(1),
-                  style: TextStyle(
-                    fontWeight: FontWeight.bold,
-                    color: Colors.amber.shade800,
-                  ),
+                              style: TextStyle(
+                                fontWeight: FontWeight.bold,
+                                color: Colors.amber.shade800,
+                              ),
                             ),
                           ],
                         ),
@@ -213,10 +264,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                   const SizedBox(height: 20),
                   const Text(
                     'Especificaciones Técnicas',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   const SizedBox(height: 8),
                   if (specs.isEmpty)
@@ -224,30 +272,38 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       'No se detallaron especificaciones técnicas.',
                       style: TextStyle(color: Colors.grey.shade600),
                     )
+                  else if (specs.length == 1 &&
+                      specs.containsKey('especificaciones'))
+                    Text(
+                      specs['especificaciones'].toString(),
+                      style: const TextStyle(fontSize: 15, height: 1.5),
+                    )
                   else
-                    ...specs.entries.map((e) => Padding(
-                          padding: const EdgeInsets.symmetric(vertical: 4),
-                          child: Row(
-                            children: [
-                              SizedBox(
-                                width: 140,
-                                child: Text(
-                                  _labelEspec(e.key),
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.w500,
-                                    color: Colors.grey.shade700,
-                                  ),
+                    ...specs.entries.map(
+                      (e) => Padding(
+                        padding: const EdgeInsets.symmetric(vertical: 4),
+                        child: Row(
+                          children: [
+                            SizedBox(
+                              width: 140,
+                              child: Text(
+                                _labelEspec(e.key),
+                                style: TextStyle(
+                                  fontWeight: FontWeight.w500,
+                                  color: Colors.grey.shade700,
                                 ),
                               ),
-                              Expanded(
-                                child: Text(
-                                  e.value.toString(),
-                                  style: const TextStyle(fontSize: 15),
-                                ),
+                            ),
+                            Expanded(
+                              child: Text(
+                                e.value.toString(),
+                                style: const TextStyle(fontSize: 15),
                               ),
-                            ],
-                          ),
-                        )),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
                   const SizedBox(height: 24),
                   _buildReviewsSection(),
                 ],
@@ -260,9 +316,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         padding: const EdgeInsets.fromLTRB(16, 12, 16, 16),
         decoration: BoxDecoration(
           color: Colors.white,
-          border: Border(
-            top: BorderSide(color: Colors.grey.shade200),
-          ),
+          border: Border(top: BorderSide(color: Colors.grey.shade200)),
           boxShadow: [
             BoxShadow(
               color: Colors.black.withValues(alpha: 0.05),
@@ -342,6 +396,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
     );
   }
 
+  @override
+  void dispose() {
+    debugPrint('DEBUG DETAIL: dispose');
+    super.dispose();
+  }
+
   Widget _specChip(IconData icon, String label) {
     final theme = Theme.of(context);
     return Chip(
@@ -367,8 +427,7 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
           color: sinStock ? Colors.red : Colors.green.shade700,
         ),
       ),
-      backgroundColor:
-          sinStock ? Colors.red.shade50 : Colors.green.shade50,
+      backgroundColor: sinStock ? Colors.red.shade50 : Colors.green.shade50,
       side: BorderSide(
         color: sinStock ? Colors.red.shade200 : Colors.green.shade200,
       ),
@@ -395,14 +454,19 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       children: [
         Row(
           children: [
-            const Text('Reseñas', style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+            const Text(
+              'Reseñas',
+              style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+            ),
             const Spacer(),
             if (_totalResenas > 0)
               Row(
                 children: [
                   ...List.generate(5, (i) {
                     return Icon(
-                      i < _ratingPromedio.round() ? Icons.star : Icons.star_border,
+                      i < _ratingPromedio.round()
+                          ? Icons.star
+                          : Icons.star_border,
                       size: 18,
                       color: Colors.amber,
                     );
@@ -418,10 +482,12 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
         ),
         const SizedBox(height: 12),
         if (_cargandoReviews)
-          const Center(child: Padding(
-            padding: EdgeInsets.all(16),
-            child: CircularProgressIndicator(),
-          ))
+          const Center(
+            child: Padding(
+              padding: EdgeInsets.all(16),
+              child: CircularProgressIndicator(),
+            ),
+          )
         else ...[
           if (_reviews.isEmpty)
             Padding(
@@ -471,14 +537,20 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                     review.userName.isNotEmpty
                         ? review.userName[0].toUpperCase()
                         : '?',
-                    style: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                    style: const TextStyle(
+                      fontSize: 12,
+                      fontWeight: FontWeight.bold,
+                    ),
                   ),
                 ),
                 const SizedBox(width: 8),
                 Expanded(
                   child: Text(
                     review.userName,
-                    style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 14),
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w600,
+                      fontSize: 14,
+                    ),
                   ),
                 ),
                 ...List.generate(5, (i) {
@@ -523,7 +595,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2),
@@ -531,8 +604,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
               const SizedBox(height: 12),
-              Text('Todas las reseñas ($_totalResenas)',
-                  style: const TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              Text(
+                'Todas las reseñas ($_totalResenas)',
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
               const SizedBox(height: 12),
               Expanded(
                 child: ListView.builder(
@@ -560,7 +638,9 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
       builder: (ctx) => StatefulBuilder(
         builder: (ctx, setSheetState) => Padding(
           padding: EdgeInsets.only(
-            left: 16, right: 16, top: 16,
+            left: 16,
+            right: 16,
+            top: 16,
             bottom: MediaQuery.of(ctx).viewInsets.bottom + 16,
           ),
           child: Column(
@@ -569,7 +649,8 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
             children: [
               Center(
                 child: Container(
-                  width: 40, height: 4,
+                  width: 40,
+                  height: 4,
                   decoration: BoxDecoration(
                     color: Colors.grey.shade300,
                     borderRadius: BorderRadius.circular(2),
@@ -577,8 +658,10 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                 ),
               ),
               const SizedBox(height: 16),
-              const Text('Califica este producto',
-                  style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold)),
+              const Text(
+                'Califica este producto',
+                style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+              ),
               const SizedBox(height: 12),
               Center(
                 child: Row(
@@ -614,11 +697,13 @@ class _ProductDetailScreenState extends State<ProductDetailScreen> {
                       rating: rating,
                       comment: commentController.text.trim(),
                     );
-                    AnalyticsService().logReview(
-                      productId: _product.id,
-                      rating: rating,
+                    unawaited(
+                      AnalyticsService().logReview(
+                        productId: _product.id,
+                        rating: rating,
+                      ),
                     );
-                    if (!ctx.mounted) return;
+                    if (!mounted || !ctx.mounted) return;
                     Navigator.pop(ctx);
                     _cargarReviews();
                     ScaffoldMessenger.of(context).showSnackBar(

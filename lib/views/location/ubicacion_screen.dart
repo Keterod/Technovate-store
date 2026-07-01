@@ -1,8 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:geolocator/geolocator.dart';
 import 'package:google_maps_flutter/google_maps_flutter.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import '../../core/widgets/technovate_widgets.dart';
+import '../../services/location_service.dart';
 import '../../viewmodels/location_view_model.dart';
 
 class UbicacionScreen extends StatefulWidget {
@@ -14,7 +16,9 @@ class UbicacionScreen extends StatefulWidget {
 
 class _UbicacionScreenState extends State<UbicacionScreen> {
   late final LocationViewModel _viewModel;
+  final LocationService _locationService = LocationService();
   GoogleMapController? mapController;
+  List<SucursalInfo> _sucursales = [];
 
   @override
   void initState() {
@@ -22,6 +26,14 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
     _viewModel = LocationViewModel();
     _viewModel.addListener(_onViewModelChanged);
     _viewModel.cargarDatos();
+    _cargarSucursales();
+  }
+
+  Future<void> _cargarSucursales() async {
+    try {
+      final list = await _locationService.obtenerSucursales();
+      if (mounted) setState(() => _sucursales = list);
+    } catch (_) {}
   }
 
   @override
@@ -116,6 +128,17 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
         ),
       );
     }
+    for (int i = 0; i < _sucursales.length; i++) {
+      final s = _sucursales[i];
+      markers.add(
+        Marker(
+          markerId: MarkerId('sucursal_$i'),
+          position: s.posicion,
+          infoWindow: InfoWindow(title: s.nombre, snippet: s.direccion),
+          icon: BitmapDescriptor.defaultMarkerWithHue(BitmapDescriptor.hueOrange),
+        ),
+      );
+    }
     return markers;
   }
 
@@ -174,6 +197,17 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
         child: Text('No se pudo obtener la ubicación necesaria'),
       );
     }
+
+    final sucursalesConDistancia = _sucursales.map((s) {
+      final dist = Geolocator.distanceBetween(
+        _viewModel.ubicacionUsuario!.latitude,
+        _viewModel.ubicacionUsuario!.longitude,
+        s.posicion.latitude,
+        s.posicion.longitude,
+      );
+      return (sucursal: s, distanciaKm: dist / 1000);
+    }).toList()
+      ..sort((a, b) => a.distanciaKm.compareTo(b.distanciaKm));
 
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
@@ -288,10 +322,91 @@ class _UbicacionScreenState extends State<UbicacionScreen> {
                   ),
                 ],
               ),
+        Container(
+          padding: const EdgeInsets.all(16),
+          decoration: BoxDecoration(
+            color: Colors.grey.shade100,
+            border: Border(top: BorderSide(color: Colors.grey.shade300)),
+          ),
+          constraints: const BoxConstraints(maxHeight: 280),
+          child: SingleChildScrollView(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.stretch,
+              children: [
+                Row(
+                  children: [
+                    const Icon(Icons.store, size: 20),
+                    const SizedBox(width: 8),
+                    Expanded(
+                      child: Text(
+                        _viewModel.nombreTienda,
+                        style: TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: Theme.of(context).colorScheme.primary,
+                        ),
+                      ),
+                    ),
+                    if (_viewModel.distancia.isNotEmpty)
+                      Chip(
+                        label: Text('${_viewModel.distancia} · ${_viewModel.duracion}',
+                            style: const TextStyle(fontSize: 12)),
+                        visualDensity: VisualDensity.compact,
+                      ),
+                  ],
+                ),
+                const SizedBox(height: 8),
+                ElevatedButton.icon(
+                  onPressed: _abrirGoogleMaps,
+                  icon: const Icon(Icons.map, size: 18),
+                  label: const Text('Abrir en Google Maps'),
+                  style: ElevatedButton.styleFrom(
+                    padding: const EdgeInsets.symmetric(vertical: 10),
+                  ),
+                ),
+                if (_sucursales.isNotEmpty) ...[
+                  const Divider(height: 20),
+                  Text('Otras sucursales cercanas',
+                      style: TextStyle(
+                          fontSize: 14,
+                          fontWeight: FontWeight.w600,
+                          color: Colors.grey.shade700)),
+                  const SizedBox(height: 8),
+                  ...sucursalesConDistancia.map((s) => _buildSucursalRow(sucursal: s.sucursal, distanciaKm: s.distanciaKm)),
+                ],
+              ],
             ),
           ),
         ),
       ],
+    );
+  }
+
+  Widget _buildSucursalRow({required SucursalInfo sucursal, required double distanciaKm}) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 8),
+      child: Row(
+        children: [
+          const Icon(Icons.store_outlined, size: 18, color: Colors.orange),
+          const SizedBox(width: 8),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(sucursal.nombre,
+                    style: const TextStyle(fontWeight: FontWeight.w500, fontSize: 14)),
+                if (sucursal.direccion.isNotEmpty)
+                  Text(sucursal.direccion,
+                      style: TextStyle(fontSize: 12, color: Colors.grey.shade600),
+                      maxLines: 1,
+                      overflow: TextOverflow.ellipsis),
+              ],
+            ),
+          ),
+          Text('${distanciaKm.toStringAsFixed(1)} km',
+              style: TextStyle(fontSize: 13, color: Colors.grey.shade700)),
+        ],
+      ),
     );
   }
 }

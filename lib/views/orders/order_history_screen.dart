@@ -14,10 +14,12 @@ class OrderHistoryScreen extends StatefulWidget {
 }
 
 class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
+  late final Stream<List<OrderModel>> _ordersStream;
+
   @override
   void initState() {
     super.initState();
-    widget.orderViewModel.loadOrders();
+    _ordersStream = widget.orderViewModel.watchOrders();
   }
 
   Color _colorEstado(String estado) {
@@ -142,14 +144,13 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      appBar: AppBar(
-        title: tituloTechnovate(subtitulo: 'Mis Pedidos'),
-      ),
+      appBar: AppBar(title: tituloTechnovate(subtitulo: 'Mis Pedidos')),
       body: StreamBuilder<List<OrderModel>>(
-        stream: widget.orderViewModel.watchOrders(),
+        stream: _ordersStream,
         builder: (context, snapshot) {
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            debugPrint('DEBUG ORDER: history stream error=${snapshot.error}');
+            return const Center(child: Text('No se pudo cargar el historial.'));
           }
           if (!snapshot.hasData) {
             return const Center(child: CircularProgressIndicator());
@@ -160,15 +161,15 @@ class _OrderHistoryScreenState extends State<OrderHistoryScreen> {
               child: Column(
                 mainAxisAlignment: MainAxisAlignment.center,
                 children: [
-                  Icon(Icons.receipt_long,
-                      size: 64, color: Colors.grey.shade400),
+                  Icon(
+                    Icons.receipt_long,
+                    size: 64,
+                    color: Colors.grey.shade400,
+                  ),
                   const SizedBox(height: 12),
                   Text(
                     'No tienes pedidos aún',
-                    style: TextStyle(
-                      fontSize: 16,
-                      color: Colors.grey.shade600,
-                    ),
+                    style: TextStyle(fontSize: 16, color: Colors.grey.shade600),
                   ),
                   const SizedBox(height: 8),
                   Text(
@@ -263,10 +264,7 @@ class _OrderDetailSheet extends StatelessWidget {
                 children: [
                   const Text(
                     'Total',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                    ),
+                    style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
                   ),
                   Text(
                     'S/. ${order.total.toStringAsFixed(2)}',
@@ -287,7 +285,8 @@ class _OrderDetailSheet extends StatelessWidget {
               Text(order.direccion['nombre'] ?? ''),
               Text(order.direccion['direccion'] ?? ''),
               Text(
-                  '${order.direccion['ciudad'] ?? ''} - ${order.direccion['telefono'] ?? ''}'),
+                '${order.direccion['ciudad'] ?? ''} - ${order.direccion['telefono'] ?? ''}',
+              ),
               const SizedBox(height: 12),
               const Text(
                 'Método de pago',
