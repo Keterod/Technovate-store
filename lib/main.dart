@@ -17,6 +17,16 @@ import 'dart:async';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  await FirebaseAppCheck.instance.activate(
+    providerAndroid: kDebugMode
+        ? const AndroidDebugProvider()
+        : const AndroidPlayIntegrityProvider(),
+    providerWeb: ReCaptchaV3Provider('YOUR_RECAPTCHA_V3_SITE_KEY_PLACEHOLDER'),
+  );
+  await AnalyticsService().initialize();
   debugPrint('DEBUG BOOT: main init start');
 
   try {

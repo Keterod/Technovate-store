@@ -15,6 +15,15 @@ class AnalyticsService {
   static const Duration _timeout = Duration(seconds: 3);
 
   Future<void> initialize() async {
+    if (!kIsWeb) {
+      FlutterError.onError = (details) {
+        _crashlytics.recordFlutterFatalError(details);
+      };
+      PlatformDispatcher.instance.onError = (error, stack) {
+        _crashlytics.recordError(error, stack, fatal: true);
+        return true;
+      };
+      await _crashlytics.setCrashlyticsCollectionEnabled(!kDebugMode);
     if (kIsWeb) return;
 
     FlutterError.onError = (details) {
@@ -138,6 +147,9 @@ class AnalyticsService {
   }
 
   Future<void> setUserId(String? uid) async {
+    await _analytics.setUserId(id: uid);
+    if (uid != null && !kIsWeb) {
+      await _crashlytics.setUserIdentifier(uid);
     await _safeAnalytics('set_user_id', () => _analytics.setUserId(id: uid));
     if (uid != null && !kIsWeb) {
       await _safeCrashlytics(

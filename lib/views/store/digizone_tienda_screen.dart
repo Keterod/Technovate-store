@@ -59,7 +59,21 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen> {
   void initState() {
     super.initState();
     _categoriaFiltro = widget.categoriaInicial;
+    if (widget.categoriaInicial != null) {
+      _mostrarFiltros = true;
+    }
     _cargarFavoritos();
+  }
+
+  @override
+  void didUpdateWidget(covariant DigizoneTiendaScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.categoriaInicial != oldWidget.categoriaInicial && widget.categoriaInicial != null) {
+      setState(() {
+        _categoriaFiltro = widget.categoriaInicial;
+        _mostrarFiltros = true;
+      });
+    }
   }
 
   Future<void> _cargarFavoritos() async {
@@ -296,11 +310,11 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen> {
                 }
                 return GridView.builder(
                   padding: const EdgeInsets.all(12),
-                  gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
-                    crossAxisCount: 2,
-                    childAspectRatio: 0.63,
-                    crossAxisSpacing: 10,
+                  gridDelegate: const SliverGridDelegateWithMaxCrossAxisExtent(
+                    maxCrossAxisExtent: 180,
                     mainAxisSpacing: 10,
+                    crossAxisSpacing: 10,
+                    childAspectRatio: 0.73,
                   ),
                   itemCount: products.length,
                   itemBuilder: (context, index) {
@@ -322,7 +336,7 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen> {
                                 ),
                                 child: imagenProducto(
                                   product.imagen,
-                                  height: 120,
+                                  height: 110,
                                   width: double.infinity,
                                 ),
                               ),
@@ -442,7 +456,7 @@ class _DigizoneTiendaScreenState extends State<DigizoneTiendaScreen> {
 
   Widget _filterChip(String label) {
     final valor = categoriasMap[label]!;
-    final seleccionado = _categoriaFiltro == valor;
+    final seleccionado = _categoriaFiltro?.toLowerCase() == valor.toLowerCase();
     return Padding(
       padding: const EdgeInsets.only(right: 8),
       child: FilterChip(

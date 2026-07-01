@@ -14,6 +14,14 @@
       },
       "oauth_client": [
         {
+          "client_id": "346974235549-i8lj1hp6c9h3ru8ratekbli24vg3eg8j.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.example.flutter_firebase",
+            "certificate_hash": "13be69ebe8336052ff776a4335fea0a87cc4aeca"
+          }
+        },
+        {
           "client_id": "346974235549-i4pr2vajb6ud1536mvjs0cv3rspf45eo.apps.googleusercontent.com",
           "client_type": 3
         }
@@ -25,7 +33,19 @@
       ],
       "services": {
         "appinvite_service": {
-          "other_platform_oauth_client": []
+          "other_platform_oauth_client": [
+            {
+              "client_id": "346974235549-2m4p7ieuao5lfu9lgdt63qqqe2kujspl.apps.googleusercontent.com",
+              "client_type": 3
+            },
+            {
+              "client_id": "346974235549-ad60bnb5ald71mulo7r6pbh95tmb8lqa.apps.googleusercontent.com",
+              "client_type": 2,
+              "ios_info": {
+                "bundle_id": "com.example.flutterFirebase"
+              }
+            }
+          ]
         }
       }
     }

@@ -32,6 +32,15 @@ class _SensoresScreenState extends State<SensoresScreen> {
     _iniciarSensores();
     _iniciarGps();
     _cargarUbicacionTienda();
+    _timeoutTimer = Timer(const Duration(seconds: 3), () {
+      if (mounted) {
+        setState(() {
+          if (_accelerometerValues == null) _accelerometerTimeout = true;
+          if (_gyroscopeValues == null) _gyroscopeTimeout = true;
+          if (_magnetometerValues == null) _magnetometerTimeout = true;
+        });
+      }
+    });
   }
 
   void _iniciarSensores() {
@@ -150,6 +159,7 @@ class _SensoresScreenState extends State<SensoresScreen> {
 
   @override
   void dispose() {
+    _timeoutTimer?.cancel();
     for (final subscription in _streamSubscriptions) {
       subscription.cancel();
     }

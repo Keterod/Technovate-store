@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import '../../viewmodels/cart_view_model.dart';
 import '../assistant/ai_assistant_screen.dart';
 import '../cart/cart_screen.dart';
+import '../location/ubicacion_screen.dart';
 import '../store/digizone_tienda_screen.dart';
 import '../location/ubicacion_screen.dart';
 import 'home_landing_screen.dart';
@@ -27,6 +28,22 @@ class _DigizoneScreenState extends State<DigizoneScreen>
 
 
   List<Widget> get _screens {
+    if (_esAdmin) {
+      return [
+        const DigizoneAdminScreen(),
+        DigizoneTiendaScreen(
+          cartViewModel: cartViewModel,
+          onProductAdded: _onProductAdded,
+          onViewCart: () => setState(() => _selectedIndex = _indiceCarrito),
+        ),
+        CartScreen(cartViewModel: cartViewModel),
+        AiAssistantScreen(
+          cartViewModel: cartViewModel,
+          onProductAdded: _onProductAdded,
+        ),
+        const UbicacionScreen(),
+      ];
+    }
         // Admin UI block removed; admin now has separate login and guard.
 
     return [
@@ -56,10 +73,32 @@ class _DigizoneScreenState extends State<DigizoneScreen>
         cartViewModel: cartViewModel,
         onProductAdded: _onProductAdded,
       ),
+      const UbicacionScreen(),
     ];
   }
 
   List<BottomNavigationBarItem> get _navItems {
+    if (_esAdmin) {
+      return [
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.admin_panel_settings),
+          label: 'Admin',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.store),
+          label: 'Tienda',
+        ),
+        BottomNavigationBarItem(icon: _cartIcon(), label: 'Carrito'),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.auto_awesome),
+          label: 'Asistente',
+        ),
+        const BottomNavigationBarItem(
+          icon: Icon(Icons.location_on),
+          label: 'Ubicación',
+        ),
+      ];
+    }
     // Admin navigation items removed; admin uses separate routes.
 
     return [
@@ -75,6 +114,10 @@ class _DigizoneScreenState extends State<DigizoneScreen>
       const BottomNavigationBarItem(
         icon: Icon(Icons.auto_awesome),
         label: 'Asistente',
+      ),
+      const BottomNavigationBarItem(
+        icon: Icon(Icons.location_on),
+        label: 'Ubicación',
       ),
     ];
   }

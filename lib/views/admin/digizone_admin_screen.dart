@@ -352,6 +352,19 @@ class _DigizoneAdminScreenState extends State<DigizoneAdminScreen>
                             ),
                           ],
                         ),
+                        const SizedBox(width: 10),
+                        Expanded(
+                          child: DropdownButtonFormField<String>(
+                            initialValue: _categoriaSeleccionada,
+                            items: _categoriasDisplay
+                                .map((display) => DropdownMenuItem(
+                                    value: _categoriasMap[display], child: Text(display)))
+                                .toList(),
+                            onChanged: (value) =>
+                                setState(() => _categoriaSeleccionada = value),
+                            decoration: const InputDecoration(
+                              labelText: 'Categoría',
+                              icon: Icon(Icons.category),
                         IconButton(
                           icon: const Icon(Icons.logout),
                           tooltip: 'Cerrar sesión',

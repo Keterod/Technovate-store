@@ -1,5 +1,9 @@
+import 'dart:typed_data';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 import 'package:flutter/material.dart';
+import 'package:image_picker/image_picker.dart';
+import 'package:permission_handler/permission_handler.dart';
 
 import '../../core/session/session_manager.dart';
 import '../../services/profile_service.dart';
@@ -20,6 +24,96 @@ class _ProfileScreenState extends State<ProfileScreen> {
   final _telefonoController = TextEditingController();
   bool _cargando = true;
   bool _guardando = false;
+
+  Uint8List? _imagenBytes;
+
+  void _mostrarMensaje(String msg) {
+    if (!mounted) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(content: Text(msg)),
+    );
+  }
+
+  Future<void> _seleccionarImagen(ImageSource source) async {
+    try {
+      if (!kIsWeb && source == ImageSource.camera) {
+        final status = await Permission.camera.status;
+        if (status != PermissionStatus.granted) {
+          final reqStatus = await Permission.camera.request();
+          if (reqStatus != PermissionStatus.granted) {
+            _mostrarMensaje('Permiso de cámara denegado');
+            return;
+          }
+        }
+      }
+
+      final picker = ImagePicker();
+      final pickedFile = await picker.pickImage(
+        source: source,
+        maxWidth: 1024,
+        maxHeight: 1024,
+        imageQuality: 85,
+      );
+
+      if (pickedFile != null) {
+        final bytes = await pickedFile.readAsBytes();
+        setState(() {
+          _imagenBytes = bytes;
+        });
+        _mostrarMensaje('Imagen cargada correctamente');
+      } else {
+        _mostrarMensaje('Selección cancelada');
+      }
+    } catch (e) {
+      _mostrarMensaje('Error al seleccionar imagen: $e');
+    }
+  }
+
+  void _eliminarImagen() {
+    setState(() {
+      _imagenBytes = null;
+    });
+    _mostrarMensaje('Selección de imagen eliminada');
+  }
+
+  void _mostrarOpcionesImagen() {
+    showModalBottomSheet(
+      context: context,
+      builder: (BuildContext context) {
+        return SafeArea(
+          child: Wrap(
+            children: <Widget>[
+              ListTile(
+                leading: const Icon(Icons.photo_camera),
+                title: const Text('Tomar fotografía (Cámara)'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _seleccionarImagen(ImageSource.camera);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.photo_library),
+                title: const Text('Seleccionar desde galería'),
+                onTap: () {
+                  Navigator.pop(context);
+                  _seleccionarImagen(ImageSource.gallery);
+                },
+              ),
+              if (_imagenBytes != null)
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Eliminar selección', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Navigator.pop(context);
+                    _eliminarImagen();
+                  },
+                ),
+            ],
+          ),
+        );
+      },
+    );
+  }
 
   @override
   void initState() {
@@ -97,6 +191,29 @@ class _ProfileScreenState extends State<ProfileScreen> {
               padding: const EdgeInsets.all(16),
               child: Column(
                 children: [
+                  GestureDetector(
+                    onTap: _mostrarOpcionesImagen,
+                    child: Stack(
+                      alignment: Alignment.bottomRight,
+                      children: [
+                        CircleAvatar(
+                          radius: 40,
+                          backgroundColor: Theme.of(context).colorScheme.primaryContainer,
+                          backgroundImage: _imagenBytes != null ? MemoryImage(_imagenBytes!) : null,
+                          child: _imagenBytes == null
+                              ? Icon(Icons.person, size: 40,
+                                  color: Theme.of(context).colorScheme.onPrimaryContainer)
+                              : null,
+                        ),
+                        Container(
+                          padding: const EdgeInsets.all(4),
+                          decoration: BoxDecoration(
+                            color: Theme.of(context).colorScheme.primary,
+                            shape: BoxShape.circle,
+                          ),
+                          child: const Icon(Icons.camera_alt, size: 14, color: Colors.white),
+                        ),
+                      ],
                   CircleAvatar(
                     radius: 40,
                     backgroundColor: Theme.of(
@@ -168,6 +285,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       onPressed: () {
                         Navigator.push(
                           context,
+                          MaterialPageRoute(builder: (_) => const SensoresScreen()),
                           MaterialPageRoute(
                             builder: (_) => const SensoresScreen(),
                           ),
@@ -197,6 +315,10 @@ class _ProfileScreenState extends State<ProfileScreen> {
                               TextButton(
                                 onPressed: () async {
                                   Navigator.pop(ctx);
+                                  await FirebaseAuth.instance.signOut();
+                                  if (context.mounted) {
+                                    Navigator.pop(context);
+                                  }
                                   await SessionManager.logoutAndResetNavigation(
                                     reason: 'manual',
                                   );
